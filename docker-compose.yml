@@ -1,0 +1,22 @@
+version: '3'
+
+services:
+  mcp-haloscan:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    environment:
+      - HALOSCAN_API_KEY=${HALOSCAN_API_KEY}
+      - PORT=3000
+    restart: unless-stopped
+    # For use with N8N, you might want to add a network configuration
+    networks:
+      - mcp-network
+
+# If you use N8N in the same Docker Compose setup,
+# they can communicate through this network
+networks:
+  mcp-network:
+    driver: bridge
