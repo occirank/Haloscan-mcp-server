@@ -17,3 +17,6 @@ const transport = new StdioServerTransport();
 await server.connect(transport);
 
 console.error("Haloscan MCP Server running on stdio...");
+
+
+
