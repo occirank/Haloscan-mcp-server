@@ -1,6 +1,6 @@
 {
   "name": "@occirank/haloscan-server",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "Model Context Protocol server for Haloscan SEO API",
   "license": "MIT",
   "author": "Anthropic, PBC (https://anthropic.com)",
