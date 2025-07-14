@@ -9,7 +9,7 @@ const app = express();
 const PORT = parseInt(process.env.PORT || "3000", 10);
 // Enable CORS with preflight support
 app.use(cors({
-    origin: "*", // ⚠️ Replace with specific origin(s) in production
+    origin: "*",
     methods: ["GET", "POST", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization"]
 }));
@@ -47,7 +47,7 @@ app.get("/sse", (req, res) => {
         res.sendStatus(500);
     }
 });
-// Raw message endpoint (MUST use raw stream, not express.json)
+// Raw message endpoint 
 app.post("/messages", (req, res) => {
     const sessionId = req.query.sessionId;
     if (typeof sessionId !== "string") {
