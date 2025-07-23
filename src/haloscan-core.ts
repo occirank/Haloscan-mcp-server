@@ -566,14 +566,14 @@ export function configureHaloscanServer(server:McpServer) {
 
 
 
-type ToolsParams = z.infer<typeof ToolsParams>;
+type ToolsParamsType = z.infer<typeof ToolsParams>;
 
 // Tool to get keywords match
 server.tool(
   "get_keywords_match",
   "Obtenir la correspondance des mots-clés.",
   getKeywordsMatch.shape,          // <- pass the raw shape
-  async (params: ToolsParams) => {
+  async (params: ToolsParamsType) => {
     try {
       const data = await makeHaloscanRequest("/keywords/match", params, "POST");
 
@@ -606,7 +606,7 @@ server.tool(
   "get_keywords_similar",
   "Obtenir la correspondance des mots-clés.",
   getKeywordsSimilar.shape,          // <- pass the raw shape
-  async (params: ToolsParams) => {
+  async (params: ToolsParamsType) => {
     try {
       const data = await makeHaloscanRequest("/keywords/similar", params, "POST");
 
@@ -639,7 +639,7 @@ server.tool(
   "get_keywords_highlights",
   "Obtenir les points forts des mots-clés.",
   getKeywordsHighlights.shape,          // <- pass the raw shape
-  async (params: ToolsParams) => {
+  async (params: ToolsParamsType) => {
     try {
       const data = await makeHaloscanRequest("/keywords/highlights", params, "POST");
 
@@ -672,7 +672,7 @@ server.tool(
   "get_keywords_related",
   "Obtenir les mots-clés associés.",
   getKeywordsRelated.shape,          // <- pass the raw shape
-  async (params: ToolsParams) => {
+  async (params: ToolsParamsType) => {
     try {
       const data = await makeHaloscanRequest("/keywords/related", params, "POST");
 
@@ -705,7 +705,7 @@ server.tool(
   "get_keywords_questions",
   "Obtenir les questions liées aux mots-clés.",
   getKeywordsQuestions.shape,          // <- pass the raw shape
-  async (params: ToolsParams) => {
+  async (params: ToolsParamsType) => {
     try {
       const data = await makeHaloscanRequest("/keywords/questions", params, "POST");
 
@@ -738,7 +738,7 @@ server.tool(
   "get_keywords_synonyms",
   "Obtenir les synonymes des mots-clés.",
   getKeywordsSynonyms.shape,          // <- pass the raw shape
-  async (params: ToolsParams) => {
+  async (params: ToolsParamsType) => {
     try {
       const data = await makeHaloscanRequest("/keywords/synonyms", params, "POST");
 
@@ -771,7 +771,7 @@ server.tool(
   "get_keywords_find",
   "Trouver des mots-clés.",
   getKeywordsFind.shape,          // <- pass the raw shape
-  async (params: ToolsParams) => {
+  async (params: ToolsParamsType) => {
     try {
       const data = await makeHaloscanRequest("/keywords/find", params, "POST");
 
@@ -936,7 +936,7 @@ server.tool(
   "get_keywords_bulk",
   "Obtenir des mots-clés en masse.",
   getKeywordsBulk.shape,          // <- pass the raw shape
-  async (params: ToolsParams) => {
+  async (params: ToolsParamsType) => {
     try {
       const data = await makeHaloscanRequest("/keywords/bulk", params, "POST");
 
@@ -998,7 +998,7 @@ server.tool(
 );
 
 
-type DomainsToolsParams = z.infer<typeof DomainsToolsParams>;
+type DomainsToolsParamsList = z.infer<typeof DomainsToolsParams>;
 
     // Tool to get domains overview
     server.tool("get_domains_overview", "Obtenir un aperçu des domaines.", {
@@ -1037,7 +1037,7 @@ server.tool(
   "get_domains_positions",
   "Obtenir les positions des domaines.",
   getDomainsPositions.shape,          // <- pass the raw shape
-  async (params: DomainsToolsParams ) => {
+  async (params: DomainsToolsParamsList ) => {
     try {
       const data = await makeHaloscanRequest("/domains/positions", params, "POST");
 
@@ -1104,7 +1104,7 @@ server.tool(
   "get_domains_history_positions",
   "Obtenir l’historique des positions des domaines.",
   getDomainsHistoryPositions.shape,          // <- pass the raw shape
-  async (params: DomainsToolsParams) => {
+  async (params: DomainsToolsParamsList) => {
     try {
       const data = await makeHaloscanRequest("/domains/history", params, "POST");
 
@@ -1205,7 +1205,7 @@ server.tool(
   "get_domains_keywords",
   "Obtenir les mots-clés des domaines.",
   getDomainsKeywords.shape,          // <- pass the raw shape
-  async (params: DomainsToolsParams) => {
+  async (params: DomainsToolsParamsList) => {
     try {
       const data = await makeHaloscanRequest("/domains/keywords", params, "POST");
 
@@ -1304,7 +1304,7 @@ server.tool(
   "get_domains_competitors_keywords_diff",
   "Obtenir la différence de mots-clés entre les domaines et leurs concurrents.",
   getDomainsCompetitorsKeywordsDiff.shape,          // <- pass the raw shape
-  async (params: DomainsToolsParams) => {
+  async (params: DomainsToolsParamsList) => {
     try {
       const data = await makeHaloscanRequest("/domains/siteCompetitors/keywordsDiff", params, "POST");
 
@@ -1338,7 +1338,7 @@ server.tool(
   "get_domains_competitors_best_pages",
   "Obtenir les meilleures pages des concurrents des domaines.",
   getDomainsCompetitorsBestPages.shape,          // <- pass the raw shape
-  async (params: DomainsToolsParams) => {
+  async (params: DomainsToolsParamsList) => {
     try {
       const data = await makeHaloscanRequest("/domains/siteCompetitors/bestPages", params, "POST");
 
@@ -1372,7 +1372,7 @@ server.tool(
   "get_domains_competitors_keywords_best_pos",
   "Obtenir les meilleures positions des mots-clés des concurrents des domaines.",
   getDomainsCompetitorsKeywordsBestPos.shape,          // <- pass the raw shape
-  async (params: DomainsToolsParams) => {
+  async (params: DomainsToolsParamsList) => {
     try {
       const data = await makeHaloscanRequest("domains/ /keywordsBestPos", params, "POST");
 
@@ -1586,5 +1586,4 @@ server.tool(
             };
         }
     });
-
 }
