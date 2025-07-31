@@ -115,79 +115,109 @@ This server allows easy integration with Claude for Desktop, N8N, and other MCP-
   - **get_domains_overview**<br>
     - Retrieves a comprehensive SEO performance summary for a specific domain.<br>
     - Inputs:<br>
-        - `input` (string): Requested url, domain or root domain.<br>
-        - `requested_data` (string[]): Requested data for the given url or domain, corresponding to the content of different sections of the haloscan overview page.<br>
+        - `input` (string): Target url, domain or root domain.<br>
+        - `mode` (string): Any of (`auto`, `root`, `domain`, `url`). How to interpret the input. Usually, you want to use `root` to get data about the root domain.<br>
+        - `requested_data` (string[]): At least one of (`metrics`, `positions_breakdown`, `traffic_value`, `categories`, `best_keywords`, `best_pages`, `gmb_backlinks`, `visibility_index_history`, `positions_breakdown_history`, `positions_and_pages_history`). Which data to fetch among:<br>
+          - `metrics`: SEO metrics for the given domain (VI, position count, keyword count, traffic, page count, ranks, etc.).<br>
+          - `positions_breakdown`: Search engine ranking positions for the given domain.<br>
+          - `traffic_value`: Traffic value for the given domain (may take a while to compute for large domains).<br>
+          - `categories`: Categories for the given domain (may take a while to compute for large domains).<br>
+          - `best_keywords`: Top-performing keywords for the given domain (may take a while to compute for large domains).<br>
+          - `best_pages`: Top-performing pages for the given domain (may take a while to compute for large domains).<br>
+          - `gmb_backlinks`: GMB backlinks for the given domain.<br>
+          - `visibility_index_history`: Visibility index history for the given domain.<br>
+          - `positions_breakdown_history`: Search engine ranking positions breakdown history for the given domain.<br>
+          - `positions_and_pages_history`: Search engine ranking positions and pages history for the given domain.<br>
 
   - **get_domains_positions**<br>
-    - Retrieves the search engine ranking positions of a specified domain for one or more keywords.<br>
+    - Retrieves the search engine ranking positions of a specified domain.<br>
     - Input:<br>
-        - `input` (string): Requested url, domain or root domain.<br>
+        - `input` (string): Target url, domain or root domain.<br>
+        - `mode` (string): Any of (`auto`, `root`, `domain`, `url`). How to interpret the input. Usually, you want to use `root` to get data about the root domain.<br>
 
   - **get_domains_top_pages**<br>
-    - Retrieves the top-performing pages of a specified domain based on organic search metrics such as traffic, number of ranking keywords, and visibility.<br>
+    - Retrieves the top-performing pages of a specified domain based on aggregated organic search metrics such as traffic, number of ranking keywords.<br>
     - Input:<br>
-        - `input` (string): Requested url, domain or root domain.<br>
+        - `input` (string): Target url, domain or root domain.<br>
+        - `mode` (string): Any of (`auto`, `root`, `domain`, `url`). How to interpret the input. Usually, you want to use `root` to get data about the root domain.<br>
 
   - **get_domains_history_positions**<br>
-    - Retrieves historical ranking positions for a specific domain across selected keywords.<br>
+    - Retrieves historical ranking positions for a specific domain, between 2 specified dates. Very useful if you want to find lost positions.<br>
     - Inputs:<br>
-        - `input` (string): Requested url or domain.<br>
+        - `input` (string): Target url or domain.<br>
+        - `mode` (string): Any of (`auto`, `root`, `domain`, `url`). How to interpret the input. Usually, you want to use `root` to get data about the root domain.<br>
         - `date_from` (string): Date in YYYY-MM-DD format.<br>
         - `date_to` (string): Date in YYYY-MM-DD format.<br>
 
   - **get_domains_history_pages**<br>
-    - Retrieves historical SEO performance data for the top pages of a specified domain.<br>
+    - Retrieves page-wise historical SEO performance data for a specified domain between 2 specified dates.<br>
     - Inputs:<br>
-        - `input` (string): Requested url or domain.<br>
+        - `input` (string): Target url or domain.<br>
+        - `mode` (string): Any of (`auto`, `root`, `domain`, `url`). How to interpret the input. Usually, you want to use `root` to get data about the root domain.<br>
         - `date_from` (string): Date in YYYY-MM-DD format.<br>
         - `date_to` (string): Date in YYYY-MM-DD format.<br>
 
   - **get_page_best_keywords**<br>
     - Retrieves the top-performing keywords for a specific URL, showing which search queries drive the most traffic and visibility to that page.<br>
     - Input:<br>
-        - `input` (string[]): Requested urls.<br>
+        - `input` (string[]): Target urls.<br>
+        - `mode` (string): Any of (`auto`, `root`, `domain`, `url`). How to interpret the input. Usually, you want to use `root` to get data about the root domain.<br>
+        - `strategy` (string): Any of (`both`, `only_active`, `only_lost`). Whether to return all positioned keywords, only active ones or only lost ones.<br>
 
   - **get_domains_keywords**<br>
-    - Retrieves all the keywords a domain ranks for in organic search results, along with their associated metrics such as ranking position, traffic, and search volume.<br>
+    - Retrieves current positions of a given domain for a list of given keywords.<br>
     - Inputs:<br>
-        - `input` (string): Requested url or domain.<br>
-        - `keywords` (string[]): Array containing the requested keywords.<br>
+        - `input` (string): Target url or domain.<br>
+        - `mode` (string): Any of (`auto`, `root`, `domain`, `url`). How to interpret the input. Usually, you want to use `root` to get data about the root domain.<br>
+        - `keywords` (string[]): Mandatory array containing the requested keywords.<br>
 
   - **get_domains_bulk**<br>
     - Retrieves SEO performance metrics for multiple domains in a single request.<br>
     - Input:<br>
         - `inputs` (string[]): Array containing the requested urls or domains.<br>
+        - `mode` (string): Any of (`auto`, `root`, `domain`, `url`). How to interpret the input. Usually, you want to use `root` to get data about the root domains.<br>
 
   - **get_domains_competitors**<br>
-    - Retrieves a list of organic search competitors for a given domain based on overlapping keywords.<br>
+    - Retrieves a list of organic search competitors for a given domain based on overlapping keywords (may take a while to compute for large domains).<br>
     - Input:<br>
-        - `input` (string): Requested url or domain.<br>
+        - `input` (string): Target url or domain.<br>
+        - `mode` (string): Any of (`auto`, `root`, `domain`, `url`). How to interpret the input. Usually, you want to use `root` to get data about the root domain.<br>
 
   - **get_domains_competitors_keywords_diff**<br>
-    - Compares the keyword differences between a given domain and its competitors, highlighting keywords that one domain ranks for but the other does not.<br>
+    - Compares the keyword differences between a given domain and its competitors, highlighting keywords that one domain ranks for but the other does not (may take a while to compute for large domains).<br>
     - Inputs:<br>
-        - `input` (string): Requested url or domain.<br>
-        - `competitors` (string[]): List of competitors to compare the input to.<br>
+        - `input` (string): Target url or domain.<br>
+        - `mode` (string): Any of (`auto`, `root`, `domain`, `url`). How to interpret the input. Usually, you want to use `root` to get data about the root domain.<br>
+        - `competitors` (string[]): Mandatory list of (up to 20) competitors to compare the input to.<br>
+        - `exclusive` (boolean): Whether to include positions where only the search input is positioned, and none of the requested competitors is.<br>
+        - `missing` (boolean): Whether to include positions where the search input is not positioned, and at least one of the requested competitors is.<br>
+        - `bested` (boolean): Whether to include positions where the search input is positioned, and better positioned than at least one of the requested competitors.<br>
+        - `besting` (boolean): Whether to include positions where the search input is positioned, but at least one of the requested competitors is positioned better.<br>
 
   - **get_domains_competitors_best_pages**<br>
-    - Retrieves the best-performing pages of competitors for a given domain.<br>
+    - Retrieves the best-performing pages of (specified) competitors of a given domain (may take a while to compute for large domains).<br>
     - Inputs:<br>
-        - `input` (string): Requested url or domain.<br>
-        - `competitors` (string[]): List of competitors to compare the input to.<br>
+        - `input` (string): Target url or domain.<br>
+        - `mode` (string): Any of (`auto`, `root`, `domain`, `url`). How to interpret the input. Usually, you want to use `root` to get data about the root domain.<br>
+        - `competitors` (string[]): Mandatory list of (up to 20) competitors to compare the input to.<br>
 
   - **get_domains_competitors_keywords_best_positions**<br>
-    - Retrieves the best-ranking keywords for a given domain compared to its competitors.<br>
+    - Retrieves the best-ranking positions for a given list of domains on a given list of keywords.<br>
     - Inputs:<br>
         - `competitors` (string[]): List of competitor domains or root domains.<br>
-        - `keywords` (string[]): List of keywords to look for.<br>
+        - `keywords` (string[]): Mandatory list of keywords to look for.<br>
 
   - **get_domains_visibility_trends**<br>
     - Retrieves the visibility trend for a specific domain over time, showing how its search engine visibility has evolved.<br>
     - Input:<br>
         - `input` (string[]): Array containing the requested urls or domains.<br>
+        - `mode` (string): Any of (`auto`, `root`, `domain`, `url`). How to interpret the input. Usually, you want to use `root` to get data about the root domain.<br>
+        - `type` (string): Any of (`first`, `highest`, `trends`, `index`). Should data be scaled, and how. Use `index` to get the raw visibility index.<br>
 
   - **get_domains_expired**<br>
-    - Retrieves the visibility trend for a specific domain over time, showing how its search engine visibility has evolved.<br>
+    - Returns a list of available domains. Domains are returned without their url unless you have already revealed them (in which case root_domain is filled), and a call to domains/expired/reveal is required to reveal domains you are interested in.<br>
+    - Input:<br>
+        - `keyword` (string): Optional keyword on which the expired domain should have been positioned.<br>
 
 
 
