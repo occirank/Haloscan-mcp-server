@@ -1,6 +1,6 @@
 # Haloscan MCP Server
 
-A Model Context Protocol (MCP) server for interacting with the Haloscan SEO API.  
+A Model Context Protocol (MCP) server for interacting with the Haloscan SEO API.
 This server allows easy integration with Claude for Desktop, N8N, and other MCP-compatible clients.
 
 
@@ -24,76 +24,90 @@ This server allows easy integration with Claude for Desktop, N8N, and other MCP-
     - Retrieves an overview of a specific keyword, providing key performance indicators such as search volume, competition level, and trends over time.<br>
     - Inputs:<br>
         - `keyword` (string): Requested keyword.<br>
-        - `requested_data` (string[]): Any combination of [keyword_match, related_search, related_question, similar_category, similar_serp, top_sites, similar_highlight, categories, synonyms, metrics, volume_history, serp ].<br>
+        - `requested_data` (string[]): Any combination of [keyword_match, related_search, related_question, similar_category, similar_serp, top_sites, similar_highlight, categories, metrics, volume_history, serp ].<br>
+        It is mandatory to specify at least one of the requested data. Here is what they mean:<br>
+          - `keyword_match`: Top 10 (wrt search volume) keywords that include the provided keyword in their search query (exact match).<br>
+          - `related_search`: Top 10 (wrt search volume) keywords that appear in SERP's "Related Searches" section for the provided keyword.<br>
+          - `related_question`: Top 10 (wrt search volume) keywords that appear in SERP's "People Also Ask" (or in "Related Searches if the keyword is obviously a question) section for the provided keyword.<br>
+          - `similar_category`: Top 10 (wrt search volume) keywords that have the same "Products & Services" category tree as the provided keyword. Careful, fetching this data significantly increases response time.<br>
+          - `similar_serp`: Top 10 (wrt SERP similarity) keywords that have a similar organic SERP as the provided keyword.<br>
+          - `top_sites`: Top 10 (wrt visibility) websites that rank for the provided keyword and similar ones.<br>
+          - `similar_highlight`: Top 10 (wrt search volume) keywords for which similar terms are highlighted in SERP result pages.<br>
+          - `categories`: List of Products & Services categories the provided keyword belongs to.<br>
+          - `metrics`: List of metrics for the provided keyword. Those metrics include:<br>
+            - Ads metrics: volume, competition, CPC. Your usual ads data.<br>
+            - SEO metrics: corrected search volume, keyword match count, allintitle, KGR, KVI (Keyword Visibility Index).<br>
+          - `volume_history`: Up to 2 years of search volume history for the provided keyword.<br>
+          - `serp`: Last organic SERP for the provided keyword.<br>
 
   - **get_keywords_match**<br>
-    - Retrieves keyword data based on an exact match search, providing detailed insights into how the specific keyword performs in search engines.<br>
-    - Input:<br>
-        - `keyword` (string): Requested keyword.<br>
-
-  - **get_keywords_similar**<br>
-    - Retrieves the list of keywords that are semantically or topically similar to a given keyword.<br>
+    - Retrieves keywords/expressions including the provided keyword as a substring.<br>
     - Input:<br>
         - `keyword` (string): Requested keyword.<br>
 
   - **get_keywords_highlights**<br>
-    - Retrieves the key performance highlights from a given keyword.<br>
+    - Retrieves keywords/expressions for which similar terms are highlighted in SERP result pages.<br>
     - Input:<br>
         - `keyword` (string): Requested keyword.<br>
 
   - **get_keywords_related**<br>
-    - Retrieves the list of keywords that are contextually or topically related to a given keyword.<br>
+    - Retrieves keywords/expressions that appear in SERP's "Related Searches" section for the provided keyword.<br>
     - Input:<br>
         - `keyword` (string): Requested keyword.<br>
 
   - **get_keywords_questions**<br>
-    - Retrieves a list of question-based keywords related to a given keyword.<br>
-    - Input:<br>
-        - `keyword` (string): Requested keyword.<br>
-
-  - **get_keywords_synonyms**<br>
-    - Retrieves a list of synonyms related to a given keyword.<br>
+    - Retrieves keywords/expressions that appear in SERP's "People Also Ask" (or in "Related Searches if the keyword is obviously a question) section for the provided keyword.<br>
     - Input:<br>
         - `keyword` (string): Requested keyword.<br>
 
   - **get_keywords_find**<br>
-    - Retrieves comprehensive data for a given keyword or list of keywords, including search volume, competition, and trend analysis.<br>
+    - Retrieves comprehensive data for a given keyword OR list of keywords, including SEO metrics & ads metrics. This endpoint is a wrapper to call `get_keywords_match`, `get_keywords_related`, `get_keywords_questions`, `get_keywords_highlights` together.<br>
     - Inputs:<br>
         - `keyword` (string): Requested keyword.<br>
-        - `keywords` (string[]): Requested keywords.<br>
-        - `keywords_sources` (string[]): Which strategies to use to find keywords from input (Any combination of [match, serp, related, highlights, categories, questions]).<br>
+        - `keywords` (string[]): Requested keywords. Ignored if `keyword` is provided.<br>
+        - `keywords_sources` (string[]): Which strategies to use to find keywords from input (Any combination of [match, serp, related, highlights, questions]).<br>
+        At least one is required. Here is what they mean:<br>
+          - `match`: Keywords/expressions that include the provided keyword in their search query (exact match).<br>
+          - `serp`: Keywords/expressions that have a similar organic SERP as the provided keyword.<br>
+          - `related`: Keywords/expressions that appear in SERP's "Related Searches" section for the provided keyword.<br>
+          - `highlights`: Keywords/expressions for which similar terms are highlighted in SERP result pages.<br>
+          - `questions`: Keywords/expressions that appear in SERP's "People Also Ask" (or in "Related Searches if the keyword is obviously a question) section for the provided keyword.<br>
 
   - **get_keywords_site_structure**<br>
-    - Retrieves the site structure data for a given domain, including the keywords associated with the site's pages, hierarchical organization, and relevant metadata for SEO optimization.<br>
-    - Input:<br> 
-        - `keyword` (string): Requested keyword.<br>
+    - Clustering endpoint. You can use it either in bulk (then provide a value for `keywords`) or in single request (then provide a value for `keyword`).<br>
+    - Input:<br>
+        - `keyword` (string): Requested keyword. Ignored if `keywords` is provided. If you only provide a value for `keyword` (without `keywords`), then an equivalent of `get_keywords_find` will run first, to fetch keywords to group.<br>
+        - `keywords` (string[]): Requested keywords.<br>
+        - `mode` (string): Clustering mode. Either `manual` or `multi`. In `manual` mode, keywords are grouped based on SERP similarity. In `multi` mode, hierarchical groups are made, based on graph link density.<br>
 
   - **get_keywords_serp_compare**<br>
-    - Retrieves a comparison of search engine results pages (SERP) for two or more keywords, providing insights into how they perform in search rankings.<br>
+    - Compares a given keyword/expression's SERP at 2 different dates.<br>
     - Inputs:<br>
-        - `keyword` (string): Requested keyword.<br>
+        - `keyword` (string): Requested keyword/expression.<br>
         - `period` (string): The comparison period for SERPs (1 month, 3 months, 6 months, 12 months, custom).<br>
+        - `first_date` (string): Date in YYYY-MM-DD format. Ignored if `period` is not `custom`. This date must be a valid date for the given keyword/expression. Valid search dates are returned in `available_search_dates` item in call response, or as a response for `get_keywords_serp_available_dates`.<br>
+        - `second_date` (string): Date in YYYY-MM-DD format. Ignored if `period` is not `custom`. This date must be a valid date for the given keyword/expression. Valid search dates are returned in `available_search_dates` item in call response, or as a response for `get_keywords_serp_available_dates`.<br>
 
   - **get_keywords_serp_availableDates**<br>
-    - Retrieves the available dates for historical SERP data of a given keyword at a given period.<br>
-    - Input:<br> 
+    - Retrieves the available dates for historical SERP data for a given keyword.<br>
+    - Input:<br>
         - `keyword` (string): Requested keyword.<br>
 
   - **get_keywords_serp_pageEvolution**<br>
-    - Retrieves the evolution of SERP rankings for a specific keyword over time, showing how a page's position in search results has changed.<br>
+    - Retrieves the evolution of SERP rankings of a given URL for a specific keyword over time. All parameters are mandatory.<br>
     - Inputs:<br>
-        - `keyword` (string): Requested keyword.<br>
+        - `keyword` (string): Requested keyword/expression.<br>
         - `first_date` (string): Date in YYYY-MM-DD format.<br>
         - `second_date` (string): Date in YYYY-MM-DD format.<br>
-        - `url` (string)<br>
+        - `url` (string): URL to track rankings for.<br>
 
   - **get_keywords_bulk**<br>
-    - Retrieves keyword data for multiple keywords at once in a bulk request.<br>
-    - Input:<br> 
+    - Retrieves keyword data (SEO metrics, ads metrics, etc.) for multiple keywords at once in a bulk request.<br>
+    - Input:<br>
         - `keywords` (string[]): Array containing the requested keywords.<br>
 
   - **get_keywords_scrap**<br>
-    - Retrieves keyword data by scraping the search engine results pages (SERP) for a given keyword.<br>
+    - Ask Haloscan to scrape the search engine results pages (SERP) for a given keyword/expression. The scrap will take around 24h to be completed.<br>
     - Input:<br>
         - `keywords` (string[]): Array containing the requested keywords.<br>
 
@@ -132,7 +146,7 @@ This server allows easy integration with Claude for Desktop, N8N, and other MCP-
     - Retrieves the top-performing keywords for a specific URL, showing which search queries drive the most traffic and visibility to that page.<br>
     - Input:<br>
         - `input` (string[]): Requested urls.<br>
-        
+
   - **get_domains_keywords**<br>
     - Retrieves all the keywords a domain ranks for in organic search results, along with their associated metrics such as ranking position, traffic, and search volume.<br>
     - Inputs:<br>
@@ -171,7 +185,7 @@ This server allows easy integration with Claude for Desktop, N8N, and other MCP-
     - Retrieves the visibility trend for a specific domain over time, showing how its search engine visibility has evolved.<br>
     - Input:<br>
         - `input` (string[]): Array containing the requested urls or domains.<br>
-      
+
   - **get_domains_expired**<br>
     - Retrieves the visibility trend for a specific domain over time, showing how its search engine visibility has evolved.<br>
 
