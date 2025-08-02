@@ -1,4 +1,3 @@
-// mcp-server.ts
 import express, { Request, Response, NextFunction } from "express";
 import cors from "cors";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
@@ -9,54 +8,61 @@ import { configureHaloscanServer } from "./haloscan-core.js";
 const app = express();
 const PORT: number = parseInt(process.env.PORT || "3000", 10);
 
-// Enable CORS with preflight support
+// Enable CORS
 app.use(cors({
-  origin: "*", 
+  origin: "*",
   methods: ["GET", "POST", "OPTIONS"],
   allowedHeaders: ["Content-Type", "Authorization"]
 }));
 
-// Handle preflight OPTIONS requests globally
+// Handle preflight requests
 app.options("*", (_req: Request, res: Response) => {
   res.sendStatus(200);
 });
 
-// Use express.json() everywhere except /messages
+// Use JSON parser, except for /messages
 app.use((req: Request, res: Response, next: NextFunction) => {
-  if (req.path === "/messages") return next(); // Skip JSON parsing for /messages
+  if (req.path === "/messages") return next();
   express.json()(req, res, next);
 });
 
-// Create an MCP server
+// MCP server
 const server = new McpServer({
   name: "Haloscan SEO",
   version: "1.0.0"
 });
 
-// Configure the server with Haloscan tools and prompts
 configureHaloscanServer(server);
 
-// Track active transports
+// Transport and session-level API key store
 const transports: Record<string, SSEServerTransport> = {};
+export const sessionApiKeys: Record<string, string> = {}; // <-- Exported
 
 // SSE endpoint
 app.get("/sse", (req: Request, res: Response) => {
   try {
+    const apiKey = req.query["haloscan-api-key"];
+    if (typeof apiKey !== "string") {
+      return res.status(400).send("Missing haloscan-api-key");
+    }
+
     const transport = new SSEServerTransport("/messages", res);
     transports[transport.sessionId] = transport;
+    sessionApiKeys[transport.sessionId] = apiKey;
 
     res.on("close", () => {
       delete transports[transport.sessionId];
+      delete sessionApiKeys[transport.sessionId];
     });
 
-    server.connect(transport);
+    server.connect(transport); // No second param!
   } catch (error) {
     console.error("Error setting up SSE connection:", error);
     res.sendStatus(500);
   }
 });
 
-// Raw message endpoint 
+// /messages endpoint
 app.post("/messages", (req: Request, res: Response) => {
   const sessionId = req.query.sessionId;
 
@@ -89,6 +95,6 @@ app.get("/health", (_req: Request, res: Response) => {
 
 // Start server
 app.listen(PORT, () => {
-  console.log(`Haloscan MCP Server running on http://localhost:${PORT}`);
-  console.log(`Connect to /sse for SSE transport`);
+  console.log(`✅ Haloscan MCP Server running on http://localhost:${PORT}`);
+  console.log(`🔄 Connect via /sse`);
 });

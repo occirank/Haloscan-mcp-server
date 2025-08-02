@@ -1,34 +1,31 @@
 import { z } from "zod";
 import axios from "axios";
-// Configuration
-let API_KEY = process.env.HALOSCAN_API_KEY || "";
+import { sessionApiKeys } from "./http-server.js";
 const BASE_URL = "https://api.haloscan.com/api";
-// Helper function to make API calls (GET or POST)
-async function makeHaloscanRequest(endpoint, params = {}, method) {
-    if (!API_KEY) {
-        throw new Error("HALOSCAN_API_KEY is not set");
-    }
+function getApiKeyFromContext(context) {
+    const sessionId = context?.sessionId;
+    return sessionApiKeys[sessionId];
+}
+async function makeHaloscanRequest(endpoint, params = {}, method, apiKey) {
     const url = `${BASE_URL}${endpoint}`;
     try {
         let response;
-        // If method is GET, we use axios.get
         if (method.toUpperCase() === "GET") {
             response = await axios.get(url, {
                 headers: {
                     "accept": "application/json",
                     "content-type": "application/json",
-                    "haloscan-api-key": API_KEY,
+                    "haloscan-api-key": apiKey,
                 },
-                params, // GET parameters passed as query strings
+                params,
             });
         }
-        // If method is POST, we use axios.post
         else if (method.toUpperCase() === "POST") {
             response = await axios.post(url, params, {
                 headers: {
                     "accept": "application/json",
                     "content-type": "application/json",
-                    "haloscan-api-key": API_KEY,
+                    "haloscan-api-key": apiKey,
                 },
             });
         }
@@ -63,6 +60,11 @@ const ToolsParams = z.object({
     word_count_max: z.number().optional().describe(""),
     include: z.string().optional().describe(""),
     exclude: z.string().optional().describe("")
+});
+const getKeywordsOverview = z.object({
+    keyword: z.string().describe("Seed keyword"),
+    requested_data: z.array(z.string()).describe("Specific data fields to request"),
+    lang: z.string().optional().describe("Seed keyword")
 });
 const getKeywordsMatch = ToolsParams.extend({
     keyword: z.string().describe("Seed keyword"),
@@ -160,6 +162,12 @@ const DomainsToolsParams = z.object({
     kvi_keep_na: z.boolean().optional().describe(""),
     allintitle_min: z.number().optional().describe(""),
     allintitle_max: z.number().optional().describe(""),
+});
+const getDomainsOverview = z.object({
+    input: z.string().describe("Seed keyword"),
+    mode: z.string().optional().describe(""),
+    requested_data: z.array(z.string()).describe("Specific data fields to request"),
+    lang: z.string().optional().describe("Seed keyword"),
 });
 const getDomainsPositions = DomainsToolsParams.extend({
     input: z.string().describe(""),
@@ -420,120 +428,97 @@ const getDomainsExpired = z.object({
     matching_top_10_positions_max: z.number().optional().describe(""),
     matching_top_3_positions_min: z.number().optional().describe(""),
     matching_top_3_positions_max: z.number().optional().describe(""),
-    first_time_available_min: z.number().optional().describe(""),
-    first_time_available_max: z.number().optional().describe(""),
-    last_time_available_min: z.number().optional().describe(""),
-    last_time_available_max: z.number().optional().describe(""),
-    firstseen_min: z.number().optional().describe(""),
-    first_seen_max: z.number().optional().describe(""),
-    last_seen_min: z.number().optional().describe(""),
-    last_seen_max: z.number().optional().describe(""),
-    fb_comments_min: z.number().optional().describe(""),
-    fb_comments_max: z.number().optional().describe(""),
-    fb_shares_min: z.number().optional().describe(""),
-    fb_shares_max: z.number().optional().describe(""),
-    pinterest_pins_min: z.number().optional().describe(""),
-    pinterest_pins_max: z.number().optional().describe(""),
-    root_domain_include: z.number().optional().describe(""),
-    root_domain_exclude: z.number().optional().describe(""),
+    matching_top_100_traffic_min: z.number().optional().describe(""),
+    matching_top_100_traffic_max: z.number().optional().describe(""),
+    matching_top_50_traffic_min: z.number().optional().describe(""),
+    matching_top_50_traffic_max: z.number().optional().describe(""),
+    matching_top_10_traffic_min: z.number().optional().describe(""),
+    matching_top_10_traffic_max: z.number().optional().describe(""),
+    matching_top_3_traffic_min: z.number().optional().describe(""),
+    matching_top_3_traffic_max: z.number().optional().describe(""),
+    matching_count_min: z.number().optional().describe(""),
+    matching_count_max: z.number().optional().describe(""),
+    count_min: z.number().optional().describe(""),
+    count_max: z.number().optional().describe(""),
+});
+const getDomainsExpiredReveal = z.object({
+    root_domain_keys: z.array(z.number()).describe("Seed keyword")
 });
 const getDomainsGMBBacklins = z.object({
     input: z.string().describe(""),
-    mode: z.string().optional().describe(""),
-    lineCount: z.number().optional().describe(""),
-    page: z.string().optional().describe(""),
-    order_by: z.string().optional().describe("Field used for sorting results. Default sorts by descending volume."),
-    order: z.string().optional().describe(""),
-    rating_count_min: z.number().optional().describe(""),
-    rating_count_max: z.number().optional().describe(""),
-    rating_count_keep_na: z.boolean().optional().describe(""),
-    rating_value_min: z.number().optional().describe(""),
-    rating_value_max: z.number().optional().describe(""),
-    rating_value_keep_na: z.boolean().optional().describe(""),
-    latitude_min: z.number().optional().describe(""),
-    latitude_max: z.number().optional().describe(""),
-    latitude_keep_na: z.boolean().optional().describe(""),
-    longitude_min: z.number().optional().describe(""),
-    longitude_max: z.number().optional().describe(""),
-    longitude_keep_na: z.boolean().optional().describe(""),
-    categories_include: z.number().optional().describe(""),
-    categories_exclude: z.number().optional().describe(""),
-    is_claimed: z.boolean().optional().describe(""),
+});
+const getDomainsGmbBacklinksMap = z.object({
+    input: z.string().describe(""),
+    mode: z.string().optional().describe("")
+});
+const getDomainsGmbBacklinksCategories = z.object({
+    input: z.string().describe(""),
+    mode: z.string().optional().describe("")
 });
 // Configuration function that adds all tools and prompts to a server instance
 export function configureHaloscanServer(server) {
-    // Tool to set API key
-    server.tool("set_api_key", "Définir la clé API.", {
-        apiKey: z.string().describe("Your Haloscan API key")
-    }, async ({ apiKey }) => {
-        API_KEY = apiKey;
-        return {
-            content: [{ type: "text", text: "API key set successfully" }]
-        };
-    });
     // Tool to get user credits
-    server.tool("get_user_credit", "Obtenir les informations de crédit de l'utilisateur.", async () => {
-        try {
-            const data = await makeHaloscanRequest("/user/credit", {}, "GET");
+    server.tool("get_user_credit", "Obtenir les informations de crédit de l'utilisateur.", async (extra) => {
+        const apiKey = getApiKeyFromContext(extra);
+        if (!apiKey) {
             return {
-                content: [{
-                        type: "text",
-                        text: JSON.stringify(data, null, 2)
-                    }]
+                isError: true,
+                content: [{ type: "text", text: "API key not found (session or env)" }],
             };
+        }
+        try {
+            const data = await makeHaloscanRequest("/user/credit", {}, "GET", apiKey);
+            return { content: [{ type: "text", text: JSON.stringify(data, null, 2) }] };
         }
         catch (error) {
             return {
                 isError: true,
-                content: [{
+                content: [
+                    {
                         type: "text",
-                        text: `Error getting user credits: ${error instanceof Error ? error.message : String(error)}`
-                    }]
+                        text: `Error getting user credits: ${error instanceof Error ? error.message : String(error)}`,
+                    },
+                ],
             };
         }
     });
     // Tool to get keywords overview
-    server.tool("get_keywords_overview", "Obtenir un aperçu des mots-clés.", {
-        keyword: z.string().describe("Seed keyword"),
-        requested_data: z.array(z.string()).describe("Specific data fields to request"),
-        lang: z.string().optional().describe("Seed keyword"),
-    }, async ({ keyword, requested_data, lang }) => {
-        try {
-            const data = await makeHaloscanRequest("/keywords/overview", {
-                keyword,
-                requested_data,
-                lang
-            }, "POST");
+    server.tool("get_keywords_overview", "Obtenir un aperçu des mots-clés.", getKeywordsOverview.shape, async (params, extra) => {
+        const apiKey = getApiKeyFromContext(extra);
+        if (!apiKey) {
             return {
-                content: [{
-                        type: "text",
-                        text: JSON.stringify(data, null, 2)
-                    }]
+                isError: true,
+                content: [{ type: "text", text: "API key not found (session or env)" }],
             };
+        }
+        try {
+            const data = await makeHaloscanRequest("/keywords/overview", params, "POST", apiKey);
+            return { content: [{ type: "text", text: JSON.stringify(data, null, 2) }] };
         }
         catch (error) {
             return {
                 isError: true,
-                content: [{
+                content: [
+                    {
                         type: "text",
-                        text: `Error getting keywords overview: ${error instanceof Error ? error.message : String(error)}`
-                    }]
+                        text: `Error getting keywords overview: ${error instanceof Error ? error.message : String(error)}`,
+                    },
+                ],
             };
         }
     });
     // Tool to get keywords match
-    server.tool("get_keywords_match", "Obtenir la correspondance des mots-clés.", getKeywordsMatch.shape, // <- pass the raw shape
-    async (params) => {
-        try {
-            const data = await makeHaloscanRequest("/keywords/match", params, "POST");
+    server.tool("get_keywords_match", "Obtenir la correspondance des mots-clés.", getKeywordsMatch.shape, async (params, extra) => {
+        const apiKey = getApiKeyFromContext(extra);
+        if (!apiKey) {
             return {
-                content: [
-                    {
-                        type: "text",
-                        text: JSON.stringify(data, null, 2)
-                    }
-                ]
+                isError: true,
+                content: [{ type: "text", text: "API key not found (session or env)" }],
             };
+        }
+        try {
+            const data = await makeHaloscanRequest("/keywords/match", params, "POST", apiKey);
+            return { content: [{ type: "text", text: JSON.stringify(data, null, 2) }] };
         }
         catch (error) {
             return {
@@ -541,26 +526,24 @@ export function configureHaloscanServer(server) {
                 content: [
                     {
                         type: "text",
-                        text: `Error getting keywords match: ` +
-                            (error instanceof Error ? error.message : String(error))
-                    }
-                ]
+                        text: `Error getting keywords match: ${error instanceof Error ? error.message : String(error)}`,
+                    },
+                ],
             };
         }
     });
     // Tool to get keywords similar
-    server.tool("get_keywords_similar", "Obtenir la correspondance des mots-clés.", getKeywordsSimilar.shape, // <- pass the raw shape
-    async (params) => {
-        try {
-            const data = await makeHaloscanRequest("/keywords/similar", params, "POST");
+    server.tool("get_keywords_similar", "Obtenir la correspondance des mots-clés.", getKeywordsSimilar.shape, async (params, extra) => {
+        const apiKey = getApiKeyFromContext(extra);
+        if (!apiKey) {
             return {
-                content: [
-                    {
-                        type: "text",
-                        text: JSON.stringify(data, null, 2)
-                    }
-                ]
+                isError: true,
+                content: [{ type: "text", text: "API key not found (session or env)" }],
             };
+        }
+        try {
+            const data = await makeHaloscanRequest("/keywords/similar", params, "POST", apiKey);
+            return { content: [{ type: "text", text: JSON.stringify(data, null, 2) }] };
         }
         catch (error) {
             return {
@@ -568,26 +551,24 @@ export function configureHaloscanServer(server) {
                 content: [
                     {
                         type: "text",
-                        text: `Error getting keywords similar: ` +
-                            (error instanceof Error ? error.message : String(error))
-                    }
-                ]
+                        text: `Error getting keywords similar: ${error instanceof Error ? error.message : String(error)}`,
+                    },
+                ],
             };
         }
     });
     // Tool to get keywords highlights
-    server.tool("get_keywords_highlights", "Obtenir les points forts des mots-clés.", getKeywordsHighlights.shape, // <- pass the raw shape
-    async (params) => {
-        try {
-            const data = await makeHaloscanRequest("/keywords/highlights", params, "POST");
+    server.tool("get_keywords_highlights", "Obtenir les points forts des mots-clés.", getKeywordsHighlights.shape, async (params, extra) => {
+        const apiKey = getApiKeyFromContext(extra);
+        if (!apiKey) {
             return {
-                content: [
-                    {
-                        type: "text",
-                        text: JSON.stringify(data, null, 2)
-                    }
-                ]
+                isError: true,
+                content: [{ type: "text", text: "API key not found (session or env)" }],
             };
+        }
+        try {
+            const data = await makeHaloscanRequest("/keywords/highlights", params, "POST", apiKey);
+            return { content: [{ type: "text", text: JSON.stringify(data, null, 2) }] };
         }
         catch (error) {
             return {
@@ -595,26 +576,24 @@ export function configureHaloscanServer(server) {
                 content: [
                     {
                         type: "text",
-                        text: `Error getting keywords highlights: ` +
-                            (error instanceof Error ? error.message : String(error))
-                    }
-                ]
+                        text: `Error getting keywords highlights: ${error instanceof Error ? error.message : String(error)}`,
+                    },
+                ],
             };
         }
     });
     // Tool to get keywords related
-    server.tool("get_keywords_related", "Obtenir les mots-clés associés.", getKeywordsRelated.shape, // <- pass the raw shape
-    async (params) => {
-        try {
-            const data = await makeHaloscanRequest("/keywords/related", params, "POST");
+    server.tool("get_keywords_related", "Obtenir les mots-clés associés.", getKeywordsRelated.shape, async (params, extra) => {
+        const apiKey = getApiKeyFromContext(extra);
+        if (!apiKey) {
             return {
-                content: [
-                    {
-                        type: "text",
-                        text: JSON.stringify(data, null, 2)
-                    }
-                ]
+                isError: true,
+                content: [{ type: "text", text: "API key not found (session or env)" }],
             };
+        }
+        try {
+            const data = await makeHaloscanRequest("/keywords/related", params, "POST", apiKey);
+            return { content: [{ type: "text", text: JSON.stringify(data, null, 2) }] };
         }
         catch (error) {
             return {
@@ -622,26 +601,24 @@ export function configureHaloscanServer(server) {
                 content: [
                     {
                         type: "text",
-                        text: `Error getting keywords related: ` +
-                            (error instanceof Error ? error.message : String(error))
-                    }
-                ]
+                        text: `Error getting keywords related: ${error instanceof Error ? error.message : String(error)}`,
+                    },
+                ],
             };
         }
     });
     // Tool to get keywords questions
-    server.tool("get_keywords_questions", "Obtenir les questions liées aux mots-clés.", getKeywordsQuestions.shape, // <- pass the raw shape
-    async (params) => {
-        try {
-            const data = await makeHaloscanRequest("/keywords/questions", params, "POST");
+    server.tool("get_keywords_questions", "Obtenir les questions liées aux mots-clés.", getKeywordsQuestions.shape, async (params, extra) => {
+        const apiKey = getApiKeyFromContext(extra);
+        if (!apiKey) {
             return {
-                content: [
-                    {
-                        type: "text",
-                        text: JSON.stringify(data, null, 2)
-                    }
-                ]
+                isError: true,
+                content: [{ type: "text", text: "API key not found (session or env)" }],
             };
+        }
+        try {
+            const data = await makeHaloscanRequest("/keywords/questions", params, "POST", apiKey);
+            return { content: [{ type: "text", text: JSON.stringify(data, null, 2) }] };
         }
         catch (error) {
             return {
@@ -649,26 +626,24 @@ export function configureHaloscanServer(server) {
                 content: [
                     {
                         type: "text",
-                        text: `Error getting keywords questions: ` +
-                            (error instanceof Error ? error.message : String(error))
-                    }
-                ]
+                        text: `Error getting keywords questions: ${error instanceof Error ? error.message : String(error)}`,
+                    },
+                ],
             };
         }
     });
     // Tool to get keywords synonyms
-    server.tool("get_keywords_synonyms", "Obtenir les synonymes des mots-clés.", getKeywordsSynonyms.shape, // <- pass the raw shape
-    async (params) => {
-        try {
-            const data = await makeHaloscanRequest("/keywords/synonyms", params, "POST");
+    server.tool("get_keywords_synonyms", "Obtenir les synonymes des mots-clés.", getKeywordsSynonyms.shape, async (params, extra) => {
+        const apiKey = getApiKeyFromContext(extra);
+        if (!apiKey) {
             return {
-                content: [
-                    {
-                        type: "text",
-                        text: JSON.stringify(data, null, 2)
-                    }
-                ]
+                isError: true,
+                content: [{ type: "text", text: "API key not found (session or env)" }],
             };
+        }
+        try {
+            const data = await makeHaloscanRequest("/keywords/synonyms", params, "POST", apiKey);
+            return { content: [{ type: "text", text: JSON.stringify(data, null, 2) }] };
         }
         catch (error) {
             return {
@@ -676,26 +651,24 @@ export function configureHaloscanServer(server) {
                 content: [
                     {
                         type: "text",
-                        text: `Error getting keywords synonyms: ` +
-                            (error instanceof Error ? error.message : String(error))
-                    }
-                ]
+                        text: `Error getting keywords synonyms: ${error instanceof Error ? error.message : String(error)}`,
+                    },
+                ],
             };
         }
     });
     // Tool to get keywords find
-    server.tool("get_keywords_find", "Trouver des mots-clés.", getKeywordsFind.shape, // <- pass the raw shape
-    async (params) => {
-        try {
-            const data = await makeHaloscanRequest("/keywords/find", params, "POST");
+    server.tool("get_keywords_find", "Trouver des mots-clés.", getKeywordsFind.shape, async (params, extra) => {
+        const apiKey = getApiKeyFromContext(extra);
+        if (!apiKey) {
             return {
-                content: [
-                    {
-                        type: "text",
-                        text: JSON.stringify(data, null, 2)
-                    }
-                ]
+                isError: true,
+                content: [{ type: "text", text: "API key not found (session or env)" }],
             };
+        }
+        try {
+            const data = await makeHaloscanRequest("/keywords/find", params, "POST", apiKey);
+            return { content: [{ type: "text", text: JSON.stringify(data, null, 2) }] };
         }
         catch (error) {
             return {
@@ -703,26 +676,24 @@ export function configureHaloscanServer(server) {
                 content: [
                     {
                         type: "text",
-                        text: `Error getting keywords find: ` +
-                            (error instanceof Error ? error.message : String(error))
-                    }
-                ]
+                        text: `Error getting keywords find: ${error instanceof Error ? error.message : String(error)}`,
+                    },
+                ],
             };
         }
     });
     // Tool to get keywords site structure
-    server.tool("get_keywords_site_structure", "Obtenir la structure du site des mots-clés.", getKeywordsSiteStructure.shape, // <- pass the raw shape
-    async (params) => {
-        try {
-            const data = await makeHaloscanRequest("/keywords/siteStructure", params, "POST");
+    server.tool("get_keywords_site_structure", "Obtenir la structure du site des mots-clés.", getKeywordsSiteStructure.shape, async (params, extra) => {
+        const apiKey = getApiKeyFromContext(extra);
+        if (!apiKey) {
             return {
-                content: [
-                    {
-                        type: "text",
-                        text: JSON.stringify(data, null, 2)
-                    }
-                ]
+                isError: true,
+                content: [{ type: "text", text: "API key not found (session or env)" }],
             };
+        }
+        try {
+            const data = await makeHaloscanRequest("/keywords/siteStructure", params, "POST", apiKey);
+            return { content: [{ type: "text", text: JSON.stringify(data, null, 2) }] };
         }
         catch (error) {
             return {
@@ -730,26 +701,24 @@ export function configureHaloscanServer(server) {
                 content: [
                     {
                         type: "text",
-                        text: `Error getting keywords site structure: ` +
-                            (error instanceof Error ? error.message : String(error))
-                    }
-                ]
+                        text: `Error getting keywords site structure: ${error instanceof Error ? error.message : String(error)}`,
+                    },
+                ],
             };
         }
     });
     // Tool to get keywords serp compare
-    server.tool("get_keywords_serp_compare", "Comparer les mots-clés dans les SERP.", getKeywordsSerpCompare.shape, // <- pass the raw shape
-    async (params) => {
-        try {
-            const data = await makeHaloscanRequest("/keywords/serp/compare", params, "POST");
+    server.tool("get_keywords_serp_compare", "Comparer les mots-clés dans les SERP.", getKeywordsSerpCompare.shape, async (params, extra) => {
+        const apiKey = getApiKeyFromContext(extra);
+        if (!apiKey) {
             return {
-                content: [
-                    {
-                        type: "text",
-                        text: JSON.stringify(data, null, 2)
-                    }
-                ]
+                isError: true,
+                content: [{ type: "text", text: "API key not found (session or env)" }],
             };
+        }
+        try {
+            const data = await makeHaloscanRequest("/keywords/serpCompare", params, "POST", apiKey);
+            return { content: [{ type: "text", text: JSON.stringify(data, null, 2) }] };
         }
         catch (error) {
             return {
@@ -757,26 +726,24 @@ export function configureHaloscanServer(server) {
                 content: [
                     {
                         type: "text",
-                        text: `Error getting keywords serp compare: ` +
-                            (error instanceof Error ? error.message : String(error))
-                    }
-                ]
+                        text: `Error getting keywords serp compare: ${error instanceof Error ? error.message : String(error)}`,
+                    },
+                ],
             };
         }
     });
     // Tool to get keywords serp available dates
-    server.tool("get_keywords_serp_availableDates", "Obtenir les dates disponibles des mots-clés dans les SERP.", getKeywordsSerpAvailableDates.shape, // <- pass the raw shape
-    async (params) => {
-        try {
-            const data = await makeHaloscanRequest("/keywords/serp/availableDates", params, "POST");
+    server.tool("get_keywords_serp_availableDates", "Obtenir les dates disponibles des mots-clés dans les SERP.", getKeywordsSerpAvailableDates.shape, async (params, extra) => {
+        const apiKey = getApiKeyFromContext(extra);
+        if (!apiKey) {
             return {
-                content: [
-                    {
-                        type: "text",
-                        text: JSON.stringify(data, null, 2)
-                    }
-                ]
+                isError: true,
+                content: [{ type: "text", text: "API key not found (session or env)" }],
             };
+        }
+        try {
+            const data = await makeHaloscanRequest("/keywords/serp/availableDates", params, "POST", apiKey);
+            return { content: [{ type: "text", text: JSON.stringify(data, null, 2) }] };
         }
         catch (error) {
             return {
@@ -784,26 +751,24 @@ export function configureHaloscanServer(server) {
                 content: [
                     {
                         type: "text",
-                        text: `Error getting keywords serp availableDates: ` +
-                            (error instanceof Error ? error.message : String(error))
-                    }
-                ]
+                        text: `Error getting keywords serp availableDates: ${error instanceof Error ? error.message : String(error)}`,
+                    },
+                ],
             };
         }
     });
     // Tool to get keywords serp available dates
-    server.tool("get_keywords_serp_pageEvolution", "Obtenir l'évolution des pages SERP des mots-clés.", getKeywordsSerpPageEvolution.shape, // <- pass the raw shape
-    async (params) => {
-        try {
-            const data = await makeHaloscanRequest("/keywords/serp/pageEvolution", params, "POST");
+    server.tool("get_keywords_serp_pageEvolution", "Obtenir l'évolution des pages SERP des mots-clés.", getKeywordsSerpPageEvolution.shape, async (params, extra) => {
+        const apiKey = getApiKeyFromContext(extra);
+        if (!apiKey) {
             return {
-                content: [
-                    {
-                        type: "text",
-                        text: JSON.stringify(data, null, 2)
-                    }
-                ]
+                isError: true,
+                content: [{ type: "text", text: "API key not found (session or env)" }],
             };
+        }
+        try {
+            const data = await makeHaloscanRequest("/keywords/serp/pageEvolution", params, "POST", apiKey);
+            return { content: [{ type: "text", text: JSON.stringify(data, null, 2) }] };
         }
         catch (error) {
             return {
@@ -811,26 +776,24 @@ export function configureHaloscanServer(server) {
                 content: [
                     {
                         type: "text",
-                        text: `Error getting keywords serp pageEvolution: ` +
-                            (error instanceof Error ? error.message : String(error))
-                    }
-                ]
+                        text: `Error getting keywords serp pageEvolution: ${error instanceof Error ? error.message : String(error)}`,
+                    },
+                ],
             };
         }
     });
     // Tool to get keywords bulk
-    server.tool("get_keywords_bulk", "Obtenir des mots-clés en masse.", getKeywordsBulk.shape, // <- pass the raw shape
-    async (params) => {
-        try {
-            const data = await makeHaloscanRequest("/keywords/bulk", params, "POST");
+    server.tool("get_keywords_bulk", "Obtenir des mots-clés en masse.", getKeywordsBulk.shape, async (params, extra) => {
+        const apiKey = getApiKeyFromContext(extra);
+        if (!apiKey) {
             return {
-                content: [
-                    {
-                        type: "text",
-                        text: JSON.stringify(data, null, 2)
-                    }
-                ]
+                isError: true,
+                content: [{ type: "text", text: "API key not found (session or env)" }],
             };
+        }
+        try {
+            const data = await makeHaloscanRequest("/keywords/bulk", params, "POST", apiKey);
+            return { content: [{ type: "text", text: JSON.stringify(data, null, 2) }] };
         }
         catch (error) {
             return {
@@ -838,26 +801,24 @@ export function configureHaloscanServer(server) {
                 content: [
                     {
                         type: "text",
-                        text: `Error getting keywords serp pageEvolution: ` +
-                            (error instanceof Error ? error.message : String(error))
-                    }
-                ]
+                        text: `Error getting keywords bulk: ${error instanceof Error ? error.message : String(error)}`,
+                    },
+                ],
             };
         }
     });
     // Tool to get keywords scrap
-    server.tool("get_keywords_scrap", "Extraire les mots-clés.", getKeywordsScrap.shape, // <- pass the raw shape
-    async (params) => {
-        try {
-            const data = await makeHaloscanRequest("/keywords/scrap", params, "POST");
+    server.tool("get_keywords_scrap", "Extraire les mots-clés.", getKeywordsScrap.shape, async (params, extra) => {
+        const apiKey = getApiKeyFromContext(extra);
+        if (!apiKey) {
             return {
-                content: [
-                    {
-                        type: "text",
-                        text: JSON.stringify(data, null, 2)
-                    }
-                ]
+                isError: true,
+                content: [{ type: "text", text: "API key not found (session or env)" }],
             };
+        }
+        try {
+            const data = await makeHaloscanRequest("/keywords/scrap", params, "POST", apiKey);
+            return { content: [{ type: "text", text: JSON.stringify(data, null, 2) }] };
         }
         catch (error) {
             return {
@@ -865,56 +826,63 @@ export function configureHaloscanServer(server) {
                 content: [
                     {
                         type: "text",
-                        text: `Error getting keywords scrap: ` +
-                            (error instanceof Error ? error.message : String(error))
-                    }
-                ]
+                        text: `Error getting keywords scrap: ${error instanceof Error ? error.message : String(error)}`,
+                    },
+                ],
             };
         }
     });
     // Tool to get domains overview
-    server.tool("get_domains_overview", "Obtenir un aperçu des domaines.", {
-        input: z.string().describe("Seed keyword"),
-        mode: z.string().optional().describe(""),
-        requested_data: z.array(z.string()).describe("Specific data fields to request"),
-        lang: z.string().optional().describe("Seed keyword"),
-    }, async ({ input, mode, requested_data, lang }) => {
-        try {
-            const data = await makeHaloscanRequest("/domains/overview", {
-                input,
-                mode,
-                requested_data,
-                lang
-            }, "POST");
+    server.tool("get_domains_overview", "Obtenir un aperçu des domaines.", getDomainsOverview.shape, async (params, extra) => {
+        const apiKey = getApiKeyFromContext(extra);
+        if (!apiKey) {
             return {
-                content: [{
+                isError: true,
+                content: [{ type: "text", text: "API key not found (session or env)" }],
+            };
+        }
+        try {
+            const data = await makeHaloscanRequest("/domains/overview", params, "POST", apiKey);
+            return {
+                content: [
+                    {
                         type: "text",
-                        text: JSON.stringify(data, null, 2)
-                    }]
+                        text: JSON.stringify(data, null, 2),
+                    },
+                ],
             };
         }
         catch (error) {
             return {
                 isError: true,
-                content: [{
+                content: [
+                    {
                         type: "text",
-                        text: `Error getting domains overview: ${error instanceof Error ? error.message : String(error)}`
-                    }]
+                        text: `Error getting domains overview: ${error instanceof Error ? error.message : String(error)}`,
+                    },
+                ],
             };
         }
     });
     // Tool to get domains positions
     server.tool("get_domains_positions", "Obtenir les positions des domaines.", getDomainsPositions.shape, // <- pass the raw shape
-    async (params) => {
+    async (params, extra) => {
+        const apiKey = getApiKeyFromContext(extra);
+        if (!apiKey) {
+            return {
+                isError: true,
+                content: [{ type: "text", text: "API key not found (session or env)" }],
+            };
+        }
         try {
-            const data = await makeHaloscanRequest("/domains/positions", params, "POST");
+            const data = await makeHaloscanRequest("/domains/positions", params, "POST", apiKey);
             return {
                 content: [
                     {
                         type: "text",
-                        text: JSON.stringify(data, null, 2)
-                    }
-                ]
+                        text: JSON.stringify(data, null, 2),
+                    },
+                ],
             };
         }
         catch (error) {
@@ -923,25 +891,31 @@ export function configureHaloscanServer(server) {
                 content: [
                     {
                         type: "text",
-                        text: `Error getting domains positions: ` +
-                            (error instanceof Error ? error.message : String(error))
-                    }
-                ]
+                        text: `Error getting domains positions: ${error instanceof Error ? error.message : String(error)}`,
+                    },
+                ],
             };
         }
     });
     // Tool to get domains top pages
     server.tool("get_domains_top_pages", "Obtenir les pages principales des domaines.", getDomainsTopPages.shape, // <- pass the raw shape
-    async (params) => {
+    async (params, extra) => {
+        const apiKey = getApiKeyFromContext(extra);
+        if (!apiKey) {
+            return {
+                isError: true,
+                content: [{ type: "text", text: "API key not found (session or env)" }],
+            };
+        }
         try {
-            const data = await makeHaloscanRequest("/domains/topPages", params, "POST");
+            const data = await makeHaloscanRequest("/domains/topPages", params, "POST", apiKey);
             return {
                 content: [
                     {
                         type: "text",
-                        text: JSON.stringify(data, null, 2)
-                    }
-                ]
+                        text: JSON.stringify(data, null, 2),
+                    },
+                ],
             };
         }
         catch (error) {
@@ -950,25 +924,31 @@ export function configureHaloscanServer(server) {
                 content: [
                     {
                         type: "text",
-                        text: `Error getting domains top pages: ` +
-                            (error instanceof Error ? error.message : String(error))
-                    }
-                ]
+                        text: `Error getting domains top pages: ${error instanceof Error ? error.message : String(error)}`,
+                    },
+                ],
             };
         }
     });
     // Tool to get domains history positions
     server.tool("get_domains_history_positions", "Obtenir l’historique des positions des domaines.", getDomainsHistoryPositions.shape, // <- pass the raw shape
-    async (params) => {
+    async (params, extra) => {
+        const apiKey = getApiKeyFromContext(extra);
+        if (!apiKey) {
+            return {
+                isError: true,
+                content: [{ type: "text", text: "API key not found (session or env)" }],
+            };
+        }
         try {
-            const data = await makeHaloscanRequest("/domains/history", params, "POST");
+            const data = await makeHaloscanRequest("/domains/history", params, "POST", apiKey);
             return {
                 content: [
                     {
                         type: "text",
-                        text: JSON.stringify(data, null, 2)
-                    }
-                ]
+                        text: JSON.stringify(data, null, 2),
+                    },
+                ],
             };
         }
         catch (error) {
@@ -977,25 +957,31 @@ export function configureHaloscanServer(server) {
                 content: [
                     {
                         type: "text",
-                        text: `Error getting domains history positions: ` +
-                            (error instanceof Error ? error.message : String(error))
-                    }
-                ]
+                        text: `Error getting domains history positions: ${error instanceof Error ? error.message : String(error)}`,
+                    },
+                ],
             };
         }
     });
     // Tool to get domains history pages
     server.tool("get_domains_history_pages", "Obtenir l’historique des positions des domaines.", getDomainsHistoryPages.shape, // <- pass the raw shape
-    async (params) => {
+    async (params, extra) => {
+        const apiKey = getApiKeyFromContext(extra);
+        if (!apiKey) {
+            return {
+                isError: true,
+                content: [{ type: "text", text: "API key not found (session or env)" }],
+            };
+        }
         try {
-            const data = await makeHaloscanRequest("/domains/pagesHistory", params, "POST");
+            const data = await makeHaloscanRequest("/domains/pagesHistory", params, "POST", apiKey);
             return {
                 content: [
                     {
                         type: "text",
-                        text: JSON.stringify(data, null, 2)
-                    }
-                ]
+                        text: JSON.stringify(data, null, 2),
+                    },
+                ],
             };
         }
         catch (error) {
@@ -1004,25 +990,31 @@ export function configureHaloscanServer(server) {
                 content: [
                     {
                         type: "text",
-                        text: `Error getting domains history pages: ` +
-                            (error instanceof Error ? error.message : String(error))
-                    }
-                ]
+                        text: `Error getting domains history pages: ${error instanceof Error ? error.message : String(error)}`,
+                    },
+                ],
             };
         }
     });
     // Tool to get page best keywords
     server.tool("get_page_best_keywords", "Obtenir les meilleurs mots-clés de la page.", getPageBestKeywords.shape, // <- pass the raw shape
-    async (params) => {
+    async (params, extra) => {
+        const apiKey = getApiKeyFromContext(extra);
+        if (!apiKey) {
+            return {
+                isError: true,
+                content: [{ type: "text", text: "API key not found (session or env)" }],
+            };
+        }
         try {
-            const data = await makeHaloscanRequest("/domains/pageBestKeywords", params, "POST");
+            const data = await makeHaloscanRequest("/domains/pageBestKeywords", params, "POST", apiKey);
             return {
                 content: [
                     {
                         type: "text",
-                        text: JSON.stringify(data, null, 2)
-                    }
-                ]
+                        text: JSON.stringify(data, null, 2),
+                    },
+                ],
             };
         }
         catch (error) {
@@ -1031,25 +1023,31 @@ export function configureHaloscanServer(server) {
                 content: [
                     {
                         type: "text",
-                        text: `Error getting page best keywords: ` +
-                            (error instanceof Error ? error.message : String(error))
-                    }
-                ]
+                        text: `Error getting page best keywords: ${error instanceof Error ? error.message : String(error)}`,
+                    },
+                ],
             };
         }
     });
     // Tool to get domains keywords
     server.tool("get_domains_keywords", "Obtenir les mots-clés des domaines.", getDomainsKeywords.shape, // <- pass the raw shape
-    async (params) => {
+    async (params, extra) => {
+        const apiKey = getApiKeyFromContext(extra);
+        if (!apiKey) {
+            return {
+                isError: true,
+                content: [{ type: "text", text: "API key not found (session or env)" }],
+            };
+        }
         try {
-            const data = await makeHaloscanRequest("/domains/keywords", params, "POST");
+            const data = await makeHaloscanRequest("/domains/keywords", params, "POST", apiKey);
             return {
                 content: [
                     {
                         type: "text",
-                        text: JSON.stringify(data, null, 2)
-                    }
-                ]
+                        text: JSON.stringify(data, null, 2),
+                    },
+                ],
             };
         }
         catch (error) {
@@ -1058,25 +1056,31 @@ export function configureHaloscanServer(server) {
                 content: [
                     {
                         type: "text",
-                        text: `Error getting domains keywords: ` +
-                            (error instanceof Error ? error.message : String(error))
-                    }
-                ]
+                        text: `Error getting domains keywords: ${error instanceof Error ? error.message : String(error)}`,
+                    },
+                ],
             };
         }
     });
     // Tool to get domains bulk
     server.tool("get_domains_bulk", "Obtenir des domaines en masse.", getDomainsBulk.shape, // <- pass the raw shape
-    async (params) => {
+    async (params, extra) => {
+        const apiKey = getApiKeyFromContext(extra);
+        if (!apiKey) {
+            return {
+                isError: true,
+                content: [{ type: "text", text: "API key not found (session or env)" }],
+            };
+        }
         try {
-            const data = await makeHaloscanRequest("/domains/bulk", params, "POST");
+            const data = await makeHaloscanRequest("/domains/bulk", params, "POST", apiKey);
             return {
                 content: [
                     {
                         type: "text",
-                        text: JSON.stringify(data, null, 2)
-                    }
-                ]
+                        text: JSON.stringify(data, null, 2),
+                    },
+                ],
             };
         }
         catch (error) {
@@ -1085,25 +1089,31 @@ export function configureHaloscanServer(server) {
                 content: [
                     {
                         type: "text",
-                        text: `Error getting domains bulk: ` +
-                            (error instanceof Error ? error.message : String(error))
-                    }
-                ]
+                        text: `Error getting domains bulk: ${error instanceof Error ? error.message : String(error)}`,
+                    },
+                ],
             };
         }
     });
     // Tool to get domains competitors
     server.tool("get_domains_competitors", "Obtenir les concurrents des domaines.", getDomainsCompetitors.shape, // <- pass the raw shape
-    async (params) => {
+    async (params, extra) => {
+        const apiKey = getApiKeyFromContext(extra);
+        if (!apiKey) {
+            return {
+                isError: true,
+                content: [{ type: "text", text: "API key not found (session or env)" }],
+            };
+        }
         try {
-            const data = await makeHaloscanRequest("/domains/siteCompetitors", params, "POST");
+            const data = await makeHaloscanRequest("/domains/siteCompetitors", params, "POST", apiKey);
             return {
                 content: [
                     {
                         type: "text",
-                        text: JSON.stringify(data, null, 2)
-                    }
-                ]
+                        text: JSON.stringify(data, null, 2),
+                    },
+                ],
             };
         }
         catch (error) {
@@ -1112,25 +1122,31 @@ export function configureHaloscanServer(server) {
                 content: [
                     {
                         type: "text",
-                        text: `Error getting domains competitors: ` +
-                            (error instanceof Error ? error.message : String(error))
-                    }
-                ]
+                        text: `Error getting domains competitors: ${error instanceof Error ? error.message : String(error)}`,
+                    },
+                ],
             };
         }
     });
     // Tool to get domains competitors keywords diff
     server.tool("get_domains_competitors_keywords_diff", "Obtenir la différence de mots-clés entre les domaines et leurs concurrents.", getDomainsCompetitorsKeywordsDiff.shape, // <- pass the raw shape
-    async (params) => {
+    async (params, extra) => {
+        const apiKey = getApiKeyFromContext(extra);
+        if (!apiKey) {
+            return {
+                isError: true,
+                content: [{ type: "text", text: "API key not found (session or env)" }],
+            };
+        }
         try {
-            const data = await makeHaloscanRequest("/domains/siteCompetitors/keywordsDiff", params, "POST");
+            const data = await makeHaloscanRequest("/domains/siteCompetitors/keywordsDiff", params, "POST", apiKey);
             return {
                 content: [
                     {
                         type: "text",
-                        text: JSON.stringify(data, null, 2)
-                    }
-                ]
+                        text: JSON.stringify(data, null, 2),
+                    },
+                ],
             };
         }
         catch (error) {
@@ -1139,25 +1155,31 @@ export function configureHaloscanServer(server) {
                 content: [
                     {
                         type: "text",
-                        text: `Error getting domains competitors keywords diff: ` +
-                            (error instanceof Error ? error.message : String(error))
-                    }
-                ]
+                        text: `Error getting domains competitors keywords diff: ${error instanceof Error ? error.message : String(error)}`,
+                    },
+                ],
             };
         }
     });
     // Tool to get domains competitors best pages
     server.tool("get_domains_competitors_best_pages", "Obtenir les meilleures pages des concurrents des domaines.", getDomainsCompetitorsBestPages.shape, // <- pass the raw shape
-    async (params) => {
+    async (params, extra) => {
+        const apiKey = getApiKeyFromContext(extra);
+        if (!apiKey) {
+            return {
+                isError: true,
+                content: [{ type: "text", text: "API key not found (session or env)" }],
+            };
+        }
         try {
-            const data = await makeHaloscanRequest("/domains/siteCompetitors/bestPages", params, "POST");
+            const data = await makeHaloscanRequest("/domains/siteCompetitors/bestPages", params, "POST", apiKey);
             return {
                 content: [
                     {
                         type: "text",
-                        text: JSON.stringify(data, null, 2)
-                    }
-                ]
+                        text: JSON.stringify(data, null, 2),
+                    },
+                ],
             };
         }
         catch (error) {
@@ -1166,102 +1188,98 @@ export function configureHaloscanServer(server) {
                 content: [
                     {
                         type: "text",
-                        text: `Error getting domains competitors keywords diff: ` +
-                            (error instanceof Error ? error.message : String(error))
-                    }
-                ]
+                        text: `Error getting domains competitors best pages: ${error instanceof Error ? error.message : String(error)}`,
+                    },
+                ],
             };
         }
     });
     // Tool to get domains competitors keywords best pos
-    server.tool("get_domains_competitors_keywords_best_pos", "Obtenir les meilleures positions des mots-clés des concurrents des domaines.", getDomainsCompetitorsKeywordsBestPos.shape, // <- pass the raw shape
-    async (params) => {
-        try {
-            const data = await makeHaloscanRequest("domains/ /keywordsBestPos", params, "POST");
+    server.tool("get_domains_competitors_keywords_best_pos", "Obtenir les meilleures positions des mots-clés des concurrents des domaines.", getDomainsCompetitorsKeywordsBestPos.shape, async (params, extra) => {
+        const apiKey = getApiKeyFromContext(extra);
+        if (!apiKey) {
             return {
-                content: [
-                    {
-                        type: "text",
-                        text: JSON.stringify(data, null, 2)
-                    }
-                ]
+                isError: true,
+                content: [{ type: "text", text: "API key not found (session or env)" }],
+            };
+        }
+        try {
+            const data = await makeHaloscanRequest("domains/ /keywordsBestPos", params, "POST", apiKey);
+            return {
+                content: [{ type: "text", text: JSON.stringify(data, null, 2) }],
             };
         }
         catch (error) {
             return {
                 isError: true,
-                content: [
-                    {
+                content: [{
                         type: "text",
-                        text: `Error getting domains competitors keywords best pos: ` +
-                            (error instanceof Error ? error.message : String(error))
-                    }
-                ]
+                        text: `Error getting domains competitors keywords best pos: ${error instanceof Error ? error.message : String(error)}`
+                    }],
             };
         }
     });
     // Tool to get domains visibility trends
-    server.tool("get_domains_visibility_trends", "Obtenir les tendances de visibilité des domaines.", getDomainsVisibilityTrends.shape, // <- pass the raw shape
-    async (params) => {
-        try {
-            const data = await makeHaloscanRequest("/domains/history/visibilityTrends", params, "POST");
+    server.tool("get_domains_visibility_trends", "Obtenir les tendances de visibilité des domaines.", getDomainsVisibilityTrends.shape, async (params, extra) => {
+        const apiKey = getApiKeyFromContext(extra);
+        if (!apiKey) {
             return {
-                content: [
-                    {
-                        type: "text",
-                        text: JSON.stringify(data, null, 2)
-                    }
-                ]
+                isError: true,
+                content: [{ type: "text", text: "API key not found (session or env)" }],
+            };
+        }
+        try {
+            const data = await makeHaloscanRequest("/domains/history/visibilityTrends", params, "POST", apiKey);
+            return {
+                content: [{ type: "text", text: JSON.stringify(data, null, 2) }],
             };
         }
         catch (error) {
             return {
                 isError: true,
-                content: [
-                    {
+                content: [{
                         type: "text",
-                        text: `Error getting domains visibility trends: ` +
-                            (error instanceof Error ? error.message : String(error))
-                    }
-                ]
+                        text: `Error getting domains visibility trends: ${error instanceof Error ? error.message : String(error)}`
+                    }],
             };
         }
     });
     // Tool to get domains expired
-    server.tool("get_domains_expired", "Obtenir les domaines expirés.", getDomainsExpired.shape, // <- pass the raw shape
-    async (params) => {
-        try {
-            const data = await makeHaloscanRequest("/domains/expired", params, "POST");
+    server.tool("get_domains_expired", "Obtenir les domaines expirés.", getDomainsExpired.shape, async (params, extra) => {
+        const apiKey = getApiKeyFromContext(extra);
+        if (!apiKey) {
             return {
-                content: [
-                    {
-                        type: "text",
-                        text: JSON.stringify(data, null, 2)
-                    }
-                ]
+                isError: true,
+                content: [{ type: "text", text: "API key not found (session or env)" }],
+            };
+        }
+        try {
+            const data = await makeHaloscanRequest("/domains/expired", params, "POST", apiKey);
+            return {
+                content: [{ type: "text", text: JSON.stringify(data, null, 2) }],
             };
         }
         catch (error) {
             return {
                 isError: true,
-                content: [
-                    {
+                content: [{
                         type: "text",
-                        text: `Error getting domains expired: ` +
-                            (error instanceof Error ? error.message : String(error))
-                    }
-                ]
+                        text: `Error getting domains expired: ${error instanceof Error ? error.message : String(error)}`
+                    }],
             };
         }
     });
-    // Tool to get domains expired reveal
-    server.tool("get_domains_expired_reveal", "Révéler les domaines expirés.", {
-        root_domain_keys: z.array(z.number()).describe("Seed keyword")
-    }, async ({ root_domain_keys }) => {
+    // Tool to get domains expired reveal 
+    server.tool("get_domains_expired_reveal", "Révéler les domaines expirés.", getDomainsExpiredReveal.shape, async (params, extra) => {
+        const apiKey = getApiKeyFromContext(extra);
+        if (!apiKey) {
+            return {
+                isError: true,
+                content: [{ type: "text", text: "API key not found (session or env)" }],
+            };
+        }
         try {
-            const data = await makeHaloscanRequest("/domains/expired/reveal", {
-                root_domain_keys
-            }, "POST");
+            const data = await makeHaloscanRequest("/domains/expired/reveal", params, "POST", apiKey);
             return {
                 content: [{
                         type: "text",
@@ -1280,42 +1298,44 @@ export function configureHaloscanServer(server) {
         }
     });
     // Tool to get domains gmb backlinks
-    server.tool("get_domains_gmb_backlinks", "Obtenir les backlinks des domaines GMB.", getDomainsGMBBacklins.shape, // <- pass the raw shape
-    async (params) => {
-        try {
-            const data = await makeHaloscanRequest("/domains/gmbBacklinks", params, "POST");
+    server.tool("get_domains_gmb_backlinks", "Obtenir les backlinks des domaines GMB.", getDomainsGMBBacklins.shape, async (params, extra) => {
+        const apiKey = getApiKeyFromContext(extra);
+        if (!apiKey) {
             return {
-                content: [
-                    {
+                isError: true,
+                content: [{ type: "text", text: "API key not found (session or env)" }],
+            };
+        }
+        try {
+            const data = await makeHaloscanRequest("/domains/gmbBacklinks", params, "POST", apiKey);
+            return {
+                content: [{
                         type: "text",
                         text: JSON.stringify(data, null, 2)
-                    }
-                ]
+                    }]
             };
         }
         catch (error) {
             return {
                 isError: true,
-                content: [
-                    {
+                content: [{
                         type: "text",
-                        text: `Error getting domains gmb backlinks: ` +
-                            (error instanceof Error ? error.message : String(error))
-                    }
-                ]
+                        text: `Error getting domains gmb backlinks: ${error instanceof Error ? error.message : String(error)}`
+                    }]
             };
         }
     });
     // Tool to get domains gmb backlinks map
-    server.tool("get_domains_gmb_backlinks_map", "Obtenir la carte des backlinks des domaines GMB.", {
-        input: z.string().describe(""),
-        mode: z.string().optional().describe("")
-    }, async ({ input, mode }) => {
+    server.tool("get_domains_gmb_backlinks_map", "Obtenir la carte des backlinks des domaines GMB.", getDomainsGmbBacklinksMap.shape, async (params, extra) => {
+        const apiKey = getApiKeyFromContext(extra);
+        if (!apiKey) {
+            return {
+                isError: true,
+                content: [{ type: "text", text: "API key not found (session or env)" }],
+            };
+        }
         try {
-            const data = await makeHaloscanRequest("/domains/gmbBacklinks/map", {
-                input,
-                mode
-            }, "POST");
+            const data = await makeHaloscanRequest("/domains/gmbBacklinks/map", params, "POST", apiKey);
             return {
                 content: [{
                         type: "text",
@@ -1334,15 +1354,16 @@ export function configureHaloscanServer(server) {
         }
     });
     // Tool to get domains gmb backlinks categories
-    server.tool("get_domains_gmb_backlinks_categories", "Obtenir les catégories des backlinks des domaines GMB.", {
-        input: z.string().describe(""),
-        mode: z.string().optional().describe("")
-    }, async ({ input, mode }) => {
+    server.tool("get_domains_gmb_backlinks_categories", "Obtenir les catégories des backlinks des domaines GMB.", getDomainsGmbBacklinksCategories.shape, async (params, extra) => {
+        const apiKey = getApiKeyFromContext(extra);
+        if (!apiKey) {
+            return {
+                isError: true,
+                content: [{ type: "text", text: "API key not found (session or env)" }],
+            };
+        }
         try {
-            const data = await makeHaloscanRequest("/domains/gmbBacklinks/categories", {
-                input,
-                mode
-            }, "POST");
+            const data = await makeHaloscanRequest("/domains/gmbBacklinks/categories", params, "POST", apiKey);
             return {
                 content: [{
                         type: "text",
