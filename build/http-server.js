@@ -10,7 +10,7 @@ const PORT = parseInt(process.env.PORT || "3000", 10);
 app.use(cors({
     origin: "*",
     methods: ["GET", "POST", "OPTIONS"],
-    allowedHeaders: ["Content-Type", "Authorization"]
+    allowedHeaders: ["Content-Type", "Authorization", "Haloscan-Api-Key"]
 }));
 // Handle preflight requests
 app.options("*", (_req, res) => {
@@ -35,8 +35,7 @@ export const sessionApiKeys = {}; // <-- Exported
 app.get("/sse", (req, res) => {
     try {
         // Log all incoming headers for debugging
-        console.log("Incoming headers:");
-        console.table(req.headers);
+        console.log(req.headers);
         const headerKey = req.headers["haloscan-api-key"];
         const apiKey = typeof headerKey === "string"
             ? headerKey
