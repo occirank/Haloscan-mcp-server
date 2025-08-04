@@ -38,12 +38,24 @@ configureHaloscanServer(server);
 const transports: Record<string, SSEServerTransport> = {};
 export const sessionApiKeys: Record<string, string> = {}; // <-- Exported
 
-// SSE endpoint
+// SSE endpoint 
 app.get("/sse", (req: Request, res: Response) => {
   try {
-    const apiKey = req.query["haloscan-api-key"];
-    if (typeof apiKey !== "string") {
-      return res.status(400).send("Missing haloscan-api-key");
+    // Log all incoming headers for debugging
+    console.log("Incoming headers:");
+    console.table(req.headers);
+
+    const headerKey = req.headers["haloscan-api-key"];
+
+    const apiKey =
+      typeof headerKey === "string"
+        ? headerKey
+        : Array.isArray(headerKey)
+        ? headerKey[0]
+        : null;
+
+    if (!apiKey) {
+      return res.status(400).send("Missing Haloscan-Api-Key");
     }
 
     const transport = new SSEServerTransport("/messages", res);
@@ -55,9 +67,8 @@ app.get("/sse", (req: Request, res: Response) => {
       delete sessionApiKeys[transport.sessionId];
     });
 
-    server.connect(transport); // No second param!
-  } catch (error) {
-    console.error("Error setting up SSE connection:", error);
+    server.connect(transport);
+  } catch {
     res.sendStatus(500);
   }
 });
