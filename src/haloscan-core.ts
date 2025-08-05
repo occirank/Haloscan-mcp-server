@@ -831,7 +831,7 @@ export function configureHaloscanServer(server: McpServer) {
         };
       }
       try {
-        const data = await makeHaloscanRequest("/keywords/serpCompare", params, "POST", apiKey);
+        const data = await makeHaloscanRequest("/keywords/serp/compare", params, "POST", apiKey);
         return { content: [{ type: "text", text: JSON.stringify(data, null, 2) }] };
       } catch (error) {
         return {
