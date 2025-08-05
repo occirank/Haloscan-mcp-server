@@ -253,12 +253,8 @@ const getDomainsTopPages = z.object({
 
 const getDomainsHistoryPositions = DomainsToolsParams.extend({
   input: z.string().describe(""),
-  mode: z.string().optional().describe(""),
   date_from: z.string().describe(""),
   date_to: z.string().describe(""),
-  lineCount: z.number().optional().describe("Max number of returned results."),
-  order_by: z.string().optional().describe("Field used for sorting results. Default sorts by descending volume."),
-  order: z.string().optional().describe("Whether the results are sorted in ascending or descending order."),
   volume_min: z.number().optional().describe(""),
   volume_max: z.number().optional().describe(""),
   cpc_min: z.number().optional().describe(""),
