@@ -63,7 +63,20 @@ const ToolsParams = z.object({
 });
 const getKeywordsOverview = z.object({
     keyword: z.string().describe("Seed keyword"),
-    requested_data: z.array(z.string()).describe("Specific data fields to request"),
+    requested_data: z.array(z.string()).describe("Specific data fields to request").default([
+        "keyword_match",
+        "related_search",
+        "related_question",
+        "similar_category",
+        "similar_serp",
+        "top_sites",
+        "similar_highlight",
+        "categories",
+        "synonyms",
+        "metrics",
+        "volume_history",
+        "serp",
+    ]),
     lang: z.string().optional().describe("Seed keyword")
 });
 const getKeywordsMatch = ToolsParams.extend({
@@ -166,7 +179,18 @@ const DomainsToolsParams = z.object({
 const getDomainsOverview = z.object({
     input: z.string().describe("Seed keyword"),
     mode: z.string().optional().describe(""),
-    requested_data: z.array(z.string()).describe("Specific data fields to request"),
+    requested_data: z.array(z.string()).describe("Specific data fields to request").default([
+        "metrics",
+        "positions_breakdown",
+        "traffic_value",
+        "categories",
+        "best_keywords",
+        "best_pages",
+        "gmb_backlinks",
+        "visibility_index_history",
+        "positions_breakdown_history",
+        "positions_and_pages_history",
+    ]),
     lang: z.string().optional().describe("Seed keyword"),
 });
 const getDomainsPositions = DomainsToolsParams.extend({
