@@ -1518,7 +1518,7 @@ export function configureHaloscan(server: McpServer) {
         };
       }
       try {
-        const data = await makeHaloscanRequest("domains/siteCompetitors/keywordsBestPos", params, "POST", apiKey);
+        const data = await makeHaloscanRequest("/domains/siteCompetitors/keywordsBestPos", params, "POST", apiKey);
         return {
           content: [{ type: "text", text: JSON.stringify(data, null, 2) }],
         };
