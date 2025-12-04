@@ -7,6 +7,9 @@
   "homepage": "https://modelcontextprotocol.io",
   "bugs": "https://github.com/modelcontextprotocol/servers/issues",
   "type": "module",
+  "publishConfig": {
+    "access": "public"
+  },
   "main": "build/index.js",
   "bin": {
     "mcp-haloscan-server": "./build/cli.js"
