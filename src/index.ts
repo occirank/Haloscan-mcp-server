@@ -1733,14 +1733,21 @@ export function configureHaloscan(server: McpServer) {
   );
 }
 
-// Configure the server with Haloscan tools and prompts
-configureHaloscan(server);
+// Pre-register tool capabilities and handlers BEFORE connecting
+// This allows the transport to start listening immediately,
+// avoiding timeout issues on slower machines (npx/ESM/Zod overhead)
+(server as any).setToolRequestHandlers();
 
 // Start receiving messages on stdin and sending messages on stdout
 const transport = new StdioServerTransport();
 await server.connect(transport);
 
 console.error("Haloscan MCP Server running on stdio...");
+
+// Now register all tools. The handlers were already set up above,
+// so setToolRequestHandlers() is a no-op (already initialized).
+// sendToolListChanged() notifies Claude that tools are now available.
+configureHaloscan(server);
 
 
 
