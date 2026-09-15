@@ -15,7 +15,7 @@
     "mcp-haloscan-server": "./build/cli.js"
   },
   "scripts": {
-    "build": "tsc && chmod 755 build/cli.js",
+    "build": "tsc",
     "start": "node build/index.js",
     "http": "node build/http-server.js",
     "dev": "npx ts-node --esm src/index.ts",
