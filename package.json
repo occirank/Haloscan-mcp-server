@@ -1,6 +1,6 @@
 {
   "name": "@occirank/haloscan-server",
-  "version": "2.0.26",
+  "version": "2.0.27",
   "description": "Model Context Protocol server for Haloscan SEO API",
   "license": "MIT",
   "author": "Anthropic, PBC (https://anthropic.com)",
@@ -11,11 +11,16 @@
     "access": "public"
   },
   "main": "build/index.js",
+  "files": [
+    "build/**",
+    "README.md"
+  ],
   "bin": {
     "mcp-haloscan-server": "./build/cli.js"
   },
   "scripts": {
     "build": "tsc",
+    "prepack": "npm run build",
     "start": "node build/index.js",
     "http": "node build/http-server.js",
     "dev": "npx ts-node --esm src/index.ts",
