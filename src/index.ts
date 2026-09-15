@@ -14,14 +14,21 @@ const server = new McpServer({
   version: "1.0.0"
 });
 
-async function makeHaloscanRequest(endpoint: string, params: Record<string, any> = {}, method: "GET" | "POST", apiKey: string): Promise<any> {
+async function makeHaloscanRequest(
+  endpoint: string,
+  params: Record<string, any> = {},
+  method: "GET" | "POST" | "DELETE",
+  apiKey: string
+): Promise<any> {
   const url = `${BASE_URL}${endpoint}`;
+
   try {
     let response;
+
     if (method.toUpperCase() === "GET") {
       response = await axios.get(url, {
         headers: {
-          "accept": "application/json",
+          accept: "application/json",
           "content-type": "application/json",
           "haloscan-api-key": apiKey,
         },
@@ -30,14 +37,24 @@ async function makeHaloscanRequest(endpoint: string, params: Record<string, any>
     } else if (method.toUpperCase() === "POST") {
       response = await axios.post(url, params, {
         headers: {
-          "accept": "application/json",
+          accept: "application/json",
           "content-type": "application/json",
           "haloscan-api-key": apiKey,
         },
       });
+    } else if (method.toUpperCase() === "DELETE") {
+      response = await axios.delete(url, {
+        headers: {
+          accept: "application/json",
+          "content-type": "application/json",
+          "haloscan-api-key": apiKey,
+        },
+        data: params,
+      });
     } else {
       throw new Error(`Unsupported HTTP method: ${method}`);
     }
+
     return response.data;
   } catch (error) {
     console.error("Error making Haloscan request:", error);
@@ -566,6 +583,144 @@ const getDomainsGmbBacklinksMap = z.object({
 const getDomainsGmbBacklinksCategories = z.object({ 
   input: z.string().describe(""),
   mode: z.string().optional().describe("")
+});
+
+const createProject = z.object({
+  site: z.string().describe("Main domain to follow"),
+  name: z.string().describe("Project's displayed name"),
+  keywords: z
+    .array(z.string())
+    .optional()
+    .describe(
+      "Array of tracked keywords for this project. Can enter tags separated by commas after each keyword"
+    ),
+  tags: z
+    .array(
+      z.object({
+        tag: z.string(),
+        keywords: z.array(z.string()),
+      })
+    )
+    .optional()
+    .describe(
+      "Optional array of tags for keywords. Structure is {tag: String, keywords: String[]}."
+    ),
+  competitors: z
+    .array(z.string())
+    .optional()
+    .describe("Array of tracked competitors (domains/root domains)"),
+});
+
+const updateProject = z.object({
+  project_id: z.string().describe("Project ID"),
+  site: z.string().describe("Main domain to follow"),
+  name: z.string().describe("Project's displayed name"),
+  keywords: z
+    .array(z.string())
+    .optional()
+    .describe(
+      "Array of tracked keywords for this project. Can enter tags separated by commas after each keyword"
+    ),
+  tags: z
+    .array(
+      z.object({
+        tag: z.string(),
+        keywords: z.array(z.string()),
+      })
+    )
+    .optional()
+    .describe(
+      "Optional array of tags for keywords. Structure is {tag: String, keywords: String[]}."
+    ),
+  competitors: z
+    .array(z.string())
+    .optional()
+    .describe("Array of tracked competitors (domains/root domains)"),
+});
+
+const deleteProject = z.object({
+  project_id: z.string().describe("Project ID"),
+});
+
+const listProjects = z.object({});
+
+const getProjectDetails = z.object({
+  project_id: z.string().describe("Project ID"),
+});
+
+const getProjectsOverview = z.object({
+  date_from: z
+    .string()
+    .optional()
+    .describe("Date in YYYY-MM-DD format, initial date to consider for stats"),
+  date_to: z
+    .string()
+    .optional()
+    .describe("Date in YYYY-MM-DD format, final date to consider for stats"),
+  orderBy: z
+    .enum(["custom_rank", "creation_date", "name"])
+    .default("creation_date")
+    .describe("Field used for sorting"),
+  order: z
+    .enum(["asc", "desc"])
+    .default("desc")
+    .describe("Whether to sort by ascending or descending order"),
+});
+
+const getProjectOverview = z.object({
+  project_id: z.string().describe("Project ID"),
+  date_from: z
+    .string()
+    .optional()
+    .describe("Date in YYYY-MM-DD format, initial date to consider for stats"),
+  date_to: z
+    .string()
+    .optional()
+    .describe("Date in YYYY-MM-DD format, final date to consider for stats"),
+});
+
+const getProjectKeywords = z.object({
+  project_id: z.string().describe("Project ID"),
+  date_from: z
+    .string()
+    .optional()
+    .describe("Date in YYYY-MM-DD format, initial date to consider for stats"),
+  date_to: z
+    .string()
+    .optional()
+    .describe("Date in YYYY-MM-DD format, final date to consider for stats"),
+  tags: z
+    .array(z.string())
+    .optional()
+    .describe(
+      "Keep only keywords with specified tags. Tags must be defined within the project."
+    ),
+  lineCount: z
+    .number()
+    .default(20)
+    .describe("Max number of returned results"),
+  page: z
+    .number()
+    .default(1)
+    .describe("Page number"),
+});
+
+const getProjectTracking = z.object({
+  project_id: z.string().describe("Project ID"),
+  date_from: z
+    .string()
+    .optional()
+    .describe("Date in YYYY-MM-DD format, initial date to consider for stats"),
+  date_to: z
+    .string()
+    .optional()
+    .describe("Date in YYYY-MM-DD format, final date to consider for stats"),
+  tags: z
+    .array(z.string())
+    .optional()
+    .describe(
+      "Keep only keywords with specified tags. Tags must be defined within the project."
+    ),
 });
 
 
@@ -1727,6 +1882,311 @@ export function configureHaloscan(server: McpServer) {
             type: "text",
             text: `Error getting domains gmb backlinks categories: ${error instanceof Error ? error.message : String(error)}`
           }]
+        };
+      }
+    }
+  );
+
+  /* -------------------- CREATE PROJECT -------------------- */
+  server.tool(
+    "create_project",
+    "Créer un projet.",
+    createProject.shape,
+    async (params: z.infer<typeof createProject>) => {
+      const apiKey = API_KEY;
+
+      if (!apiKey) {
+        return {
+          isError: true,
+          content: [{ type: "text", text: "API key not found (session or env)" }],
+        };
+      }
+      try {
+        const data = await makeHaloscanRequest(
+          "/projects/create",
+          params,
+          "POST",
+          apiKey
+        );
+        return {
+          content: [{ type: "text", text: JSON.stringify(data, null, 2) }],
+        };
+      } catch (error: any) {
+        return {
+          isError: true,
+          content: [{ type: "text", text: error.message }],
+        };
+      }
+    }
+  );
+
+  /* -------------------- UPDATE PROJECT -------------------- */
+  server.tool(
+    "update_project",
+    "Mettre à jour un projet avec son identifiant.",
+    updateProject.shape,
+    async (params: z.infer<typeof updateProject>) => {
+      const apiKey = API_KEY;
+
+      if (!apiKey) {
+        return {
+          isError: true,
+          content: [{ type: "text", text: "API key not found (session or env)" }],
+        };
+      }
+      try {
+        const { project_id, ...body } = params;
+  
+        const data = await makeHaloscanRequest(
+          `/projects/${project_id}`,
+          body,
+          "POST",
+          apiKey
+        );
+        return {
+          content: [{ type: "text", text: JSON.stringify(data, null, 2) }],
+        };
+      } catch (error: any) {
+        return {
+          isError: true,
+          content: [{ type: "text", text: error.message }],
+        };
+      }
+    }
+  );
+
+  /* -------------------- DELETE PROJECT -------------------- */
+  server.tool(
+    "delete_project",
+    "Supprimer définitivement un projet avec son identifiant.",
+    deleteProject.shape,
+    async (params: z.infer<typeof deleteProject>) => {
+      const apiKey = API_KEY;
+
+      if (!apiKey) {
+        return {
+          isError: true,
+          content: [{ type: "text", text: "API key not found (session or env)" }],
+        };
+      }
+      try {
+        const data = await makeHaloscanRequest(
+          `/projects/${params.project_id}`,
+          {},
+          "DELETE",
+          apiKey
+        );
+        return {
+          content: [{ type: "text", text: JSON.stringify(data, null, 2) }],
+        };
+      } catch (error: any) {
+        return {
+          isError: true,
+          content: [{ type: "text", text: error.message }],
+        };
+      }
+    }
+  );
+
+  /* -------------------- LIST PROJECTS -------------------- */
+  server.tool(
+    "list_projects",
+    "Obtenir la liste des projets existants avec leurs mots-clés et leurs tags.",
+    listProjects.shape,
+    async (_params: z.infer<typeof listProjects>) => {
+      const apiKey = API_KEY;
+
+      if (!apiKey) {
+        return {
+          isError: true,
+          content: [{ type: "text", text: "API key not found (session or env)" }],
+        };
+      }
+      try {
+        const data = await makeHaloscanRequest(
+          "/projects/list",
+          {},
+          "GET",
+          apiKey
+        );
+        return {
+          content: [{ type: "text", text: JSON.stringify(data, null, 2) }],
+        };
+      } catch (error: any) {
+        return {
+          isError: true,
+          content: [{ type: "text", text: error.message }],
+        };
+      }
+    }
+  );
+
+  /* -------------------- PROJECT DETAILS -------------------- */
+  server.tool(
+    "get_project_details",
+    "Obtenir tous les paramètres d'un projet avec son identifiant.",
+    getProjectDetails.shape,
+    async (params: z.infer<typeof getProjectDetails>) => {
+      const apiKey = API_KEY;
+
+      if (!apiKey) {
+        return {
+          isError: true,
+          content: [{ type: "text", text: "API key not found (session or env)" }],
+        };
+      }
+      try {
+        const data = await makeHaloscanRequest(
+          `/projects/${params.project_id}/details`,
+          {},
+          "POST",
+          apiKey
+        );
+        return {
+          content: [{ type: "text", text: JSON.stringify(data, null, 2) }],
+        };
+      } catch (error: any) {
+        return {
+          isError: true,
+          content: [{ type: "text", text: error.message }],
+        };
+      }
+    }
+  );
+
+  /* -------------------- PROJECTS OVERVIEW -------------------- */
+  server.tool(
+    "get_projects_overview",
+    "Obtenir un aperçu des projets, des positions, de la visibilité et des statistiques des mots-clés.",
+    getProjectsOverview.shape,
+    async (params: z.infer<typeof getProjectsOverview>) => {
+      const apiKey = API_KEY;
+
+      if (!apiKey) {
+        return {
+          isError: true,
+          content: [{ type: "text", text: "API key not found (session or env)" }],
+        };
+      }
+      try {
+        const data = await makeHaloscanRequest(
+          "/projects/overview",
+          params,
+          "POST",
+          apiKey
+        );
+        return {
+          content: [{ type: "text", text: JSON.stringify(data, null, 2) }],
+        };
+      } catch (error: any) {
+        return {
+          isError: true,
+          content: [{ type: "text", text: error.message }],
+        };
+      }
+    }
+  );
+
+  /* -------------------- PROJECT OVERVIEW -------------------- */
+  server.tool(
+    "get_project_overview",
+    "  Obtenir les données d'aperçu et les graphiques d'un projet spécifique.",
+    getProjectOverview.shape,
+    async (params: z.infer<typeof getProjectOverview>) => {
+      const apiKey = API_KEY;
+
+      if (!apiKey) {
+        return {
+          isError: true,
+          content: [{ type: "text", text: "API key not found (session or env)" }],
+        };
+      }
+      try {
+        const { project_id, ...body } = params;
+  
+        const data = await makeHaloscanRequest(
+          `/projects/${project_id}/overview`,
+          body,
+          "POST",
+          apiKey
+        );
+        return {
+          content: [{ type: "text", text: JSON.stringify(data, null, 2) }],
+        };
+      } catch (error: any) {
+        return {
+          isError: true,
+          content: [{ type: "text", text: error.message }],
+        };
+      }
+    }
+  );
+
+  /* -------------------- PROJECT KEYWORDS -------------------- */  
+  server.tool(
+    "get_project_keywords",
+    "Obtenir les données de suivi des positions des mots-clés d'un projet.",
+    getProjectKeywords.shape,
+    async (params: z.infer<typeof getProjectKeywords>) => {
+      const apiKey = API_KEY;
+
+      if (!apiKey) {
+        return {
+          isError: true,
+          content: [{ type: "text", text: "API key not found (session or env)" }],
+        };
+      }
+      try {
+        const { project_id, ...body } = params;
+  
+        const data = await makeHaloscanRequest(
+          `/projects/${project_id}/keywords`,
+          body,
+          "POST",
+          apiKey
+        );
+        return {
+          content: [{ type: "text", text: JSON.stringify(data, null, 2) }],
+        };
+      } catch (error: any) {
+        return {
+          isError: true,
+          content: [{ type: "text", text: error.message }],
+        };
+      }
+    }
+  );
+
+  /* -------------------- PROJECT TRACKING -------------------- */
+  server.tool(
+    "get_project_tracking",
+    "Obtenir les données graphiques de suivi des positions des mots-clés d'un projet.",
+    getProjectTracking.shape,
+    async (params: z.infer<typeof getProjectTracking>) => {
+      const apiKey = API_KEY;
+
+      if (!apiKey) {
+        return {
+          isError: true,
+          content: [{ type: "text", text: "API key not found (session or env)" }],
+        };
+      }
+      try {
+        const { project_id, ...body } = params;
+  
+        const data = await makeHaloscanRequest(
+          `/projects/${project_id}/tracking`,
+          body,
+          "POST",
+          apiKey
+        );
+        return {
+          content: [{ type: "text", text: JSON.stringify(data, null, 2) }],
+        };
+      } catch (error: any) {
+        return {
+          isError: true,
+          content: [{ type: "text", text: error.message }],
         };
       }
     }
