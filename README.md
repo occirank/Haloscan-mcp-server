@@ -239,7 +239,7 @@ Add this server to your Claude Desktop configuration file `claude_desktop_config
       "command": "npx",
       "args": [
         "-y",
-        "@occirank/haloscan-server@2.0.27",
+        "@occirank/haloscan-server",
         "start"
       ],
       "env": {
