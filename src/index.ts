@@ -168,6 +168,66 @@ const getKeywordsSiteStructure = z.object({
   manual_common_100: z.number().optional().describe(""),
 });
 
+const getKeywordsTopSites = z.object({
+  keywords: z
+    .array(z.string())
+    .describe("Array containing the requested keywords"),
+
+  mode: z
+    .enum(["auto", "root", "domain", "url"])
+    .optional()
+    .default("auto")
+    .describe(""),
+
+  order_by: z
+    .enum([
+      "site",
+      "score",
+      "unique_keywords",
+      "traffic",
+      "topical_relevance",
+      "top_3_positions",
+      "top_10_positions",
+      "top_50_positions",
+      "top_100_positions",
+      "total_traffic",
+      "total_keyword_count",
+    ])
+    .optional()
+    .default("score")
+    .describe(""),
+
+  order: z
+    .enum(["asc", "desc"])
+    .optional()
+    .default("asc")
+    .describe(""),
+
+  unique_keywords_min: z.number().optional().describe(""),
+  unique_keywords_max: z.number().optional().describe(""),
+
+  traffic_min: z.number().optional().describe(""),
+  traffic_max: z.number().optional().describe(""),
+
+  top_3_positions_min: z.number().optional().describe(""),
+  top_3_positions_max: z.number().optional().describe(""),
+
+  top_10_positions_min: z.number().optional().describe(""),
+  top_10_positions_max: z.number().optional().describe(""),
+
+  top_50_positions_min: z.number().optional().describe(""),
+  top_50_positions_max: z.number().optional().describe(""),
+
+  top_100_positions_min: z.boolean().optional().describe(""),
+  top_100_positions_max: z.number().optional().describe(""),
+
+  total_keyword_count_min: z.number().optional().describe(""),
+  total_keyword_count_max: z.number().optional().describe(""),
+
+  total_traffic_min: z.number().optional().describe(""),
+  total_traffic_max: z.number().optional().describe(""),
+});
+
 const getKeywordsSerpCompare = z.object({
   keyword: z.string().describe("Seed keyword"),
   period: z.string().describe(""),
@@ -179,11 +239,203 @@ const getKeywordsSerpAvailableDates = z.object({
   keyword: z.string().describe("Seed keyword"),
 });
 
+const getKeywordsSerpHistory = z.object({
+  keyword: z.string().describe("Requested keyword"),
+
+  lineCount: z
+    .number()
+    .optional()
+    .default(20)
+    .describe(""),
+
+  mode: z
+    .enum(["auto", "root", "domain", "url"])
+    .optional()
+    .default("auto")
+    .describe(""),
+
+  date_from: z
+    .string()
+    .optional()
+    .describe("Date in YYYY-MM-DD format"),
+
+  date_to: z
+    .string()
+    .optional()
+    .describe("Date in YYYY-MM-DD format"),
+
+  page: z
+    .number()
+    .optional()
+    .default(1)
+    .describe(""),
+
+  order_by: z
+    .enum([
+      "default",
+      "times_seen",
+      "presence_rate",
+      "times_in_top_3",
+      "times_in_top_10",
+      "times_in_top_50",
+      "average_position",
+      "median_position",
+      "best_position",
+      "worst_position",
+      "first_time_seen",
+      "last_time_seen",
+      "first_position",
+      "last_position",
+      "current_position",
+      "unique_position_count",
+      "average_position_count",
+      "pages_seen",
+      "unique_pages",
+      "domains_seen",
+      "unique_domains",
+      "root_domain",
+      "available",
+      "first_page_seen",
+      "last_page_seen",
+      "most_seen_page",
+      "first_domain_seen",
+      "last_domain_seen",
+      "most_seen_domain",
+    ])
+    .optional()
+    .default("default")
+    .describe(""),
+
+  order: z
+    .enum(["asc", "desc"])
+    .optional()
+    .default("asc")
+    .describe(""),
+
+  times_seen_min: z.number().optional().describe(""),
+  times_seen_max: z.number().optional().describe(""),
+
+  presence_rate_min: z.number().optional().describe(""),
+  presence_rate_max: z.number().optional().describe(""),
+
+  times_in_top_3_min: z
+    .number()
+    .min(0)
+    .max(1)
+    .optional()
+    .describe(""),
+
+  times_in_top_3_max: z
+    .number()
+    .min(0)
+    .max(1)
+    .optional()
+    .describe(""),
+
+  times_in_top_10_min: z.number().optional().describe(""),
+  times_in_top_10_max: z.number().optional().describe(""),
+
+  times_in_top_50_min: z.number().optional().describe(""),
+  times_in_top_50_max: z.number().optional().describe(""),
+
+  average_position_min: z.boolean().optional().describe(""),
+  average_position_max: z.number().optional().describe(""),
+
+  median_position_min: z.number().optional().describe(""),
+  median_position_max: z.number().optional().describe(""),
+
+  best_position_min: z.number().optional().describe(""),
+  best_position_max: z.number().optional().describe(""),
+
+  worst_position_min: z.number().optional().describe(""),
+  worst_position_max: z.number().optional().describe(""),
+
+  first_position_min: z.number().optional().describe(""),
+  first_position_max: z.number().optional().describe(""),
+
+  last_position_min: z.number().optional().describe(""),
+  last_position_max: z.number().optional().describe(""),
+
+  first_time_seen_min: z
+    .string()
+    .optional()
+    .describe("Date in YYYY-MM-DD format"),
+
+  first_time_seen_max: z
+    .string()
+    .optional()
+    .describe("Date in YYYY-MM-DD format"),
+
+  last_time_seen_min: z
+    .string()
+    .optional()
+    .describe("Date in YYYY-MM-DD format"),
+
+  last_time_seen_max: z
+    .string()
+    .optional()
+    .describe("Date in YYYY-MM-DD format"),
+
+  current_position_min: z.number().optional().describe(""),
+  current_position_max: z.number().optional().describe(""),
+
+  current_position_keep_na: z
+    .boolean()
+    .optional()
+    .describe(""),
+
+  unique_position_count_min: z.number().optional().describe(""),
+  unique_position_count_max: z.number().optional().describe(""),
+
+  average_position_count_min: z.number().optional().describe(""),
+  average_position_count_max: z.number().optional().describe(""),
+
+  pages_seen_min: z.number().optional().describe(""),
+  pages_seen_max: z.number().optional().describe(""),
+
+  domains_seen_min: z.number().optional().describe(""),
+  domains_seen_max: z.number().optional().describe(""),
+
+  available: z
+    .boolean()
+    .optional()
+    .describe("If true, keep only expired domains; if false, only active domains"),
+
+  status: z
+    .enum(["both", "active", "lost"])
+    .optional()
+    .describe(""),
+});
+
 const getKeywordsSerpPageEvolution = z.object({
   keyword: z.string().describe("Seed keyword"),
   first_date: z.string().describe(""),
   second_date: z.string().describe(""),
   url: z.string().describe(""),
+});
+
+const getKeywordsSerpDomainEvolution = z.object({
+  keyword: z
+    .string()
+    .describe("Requested keyword"),
+
+  first_date: z
+    .string()
+    .describe("Date in YYYY-MM-DD format"),
+
+  second_date: z
+    .string()
+    .describe("Date in YYYY-MM-DD format"),
+
+  url: z
+    .string()
+    .describe("Domain or root domain to track"),
+
+  mode: z
+    .enum(["auto", "root", "domain", "url"])
+    .optional()
+    .default("auto")
+    .describe(""),
 });
 
 const getKeywordsBulk = ToolsParams.extend({
@@ -269,6 +521,94 @@ const getDomainsTopPages = z.object({
   total_top_50_max: z.number().optional().describe(""),
   total_top_100_min: z.number().optional().describe(""),
   total_top_100_max: z.number().optional().describe(""),
+});
+
+const getDomainsAioSources = z.object({
+  input: z.string().describe("Requested URL or domain"),
+  mode: z.enum(["auto", "root", "domain", "url"]).optional().default("auto").describe(""),
+  lineCount: z.number().optional().default(20).describe(""),
+  page: z.number().optional().default(1).describe(""),
+  order_by: z
+    .enum([
+      "default",
+      "keyword",
+      "volume",
+      "position",
+      "url",
+      "cpc",
+      "competition",
+      "kgr",
+      "allintitle",
+      "last_scrap",
+      "word_count",
+      "result_count",
+    ])
+    .optional()
+    .default("default")
+    .describe(""),
+  order: z.enum(["asc", "desc"]).optional().default("asc").describe(""),
+
+  volume_min: z.number().optional().describe(""),
+  volume_max: z.number().optional().describe(""),
+  cpc_min: z.number().optional().describe(""),
+  cpc_max: z.number().optional().describe(""),
+  competition_min: z.number().optional().describe(""),
+  competition_max: z.number().optional().describe(""),
+  kgr_min: z.number().optional().describe(""),
+  kgr_max: z.number().optional().describe(""),
+  kvi_min: z.number().optional().describe(""),
+  kvi_max: z.number().optional().describe(""),
+  kvi_keep_na: z.boolean().optional().describe(""),
+  allintitle_min: z.number().optional().describe(""),
+  allintitle_max: z.number().optional().describe(""),
+  traffic_min: z.number().optional().describe(""),
+  traffic_max: z.number().optional().describe(""),
+  position_min: z.number().optional().describe(""),
+  position_max: z.number().optional().describe(""),
+  keyword_word_count_min: z.number().optional().describe(""),
+  keyword_word_count_max: z.number().optional().describe(""),
+  serp_date_min: z.string().optional().describe(""),
+  serp_date_max: z.string().optional().describe(""),
+  keyword_include: z.string().optional().describe(""),
+  keyword_exclude: z.string().optional().describe(""),
+  title_include: z.string().optional().describe(""),
+  title_exclude: z.string().optional().describe(""),
+  url_include: z.string().optional().describe(""),
+  url_exclude: z.string().optional().describe(""),
+  redirects: z.boolean().optional().describe(""),
+  spell_suggests: z.boolean().optional().describe(""),
+  spell_both: z.boolean().optional().describe(""),
+
+  search_intent_includes: z
+    .array(
+      z.enum([
+        "informational",
+        "transactional",
+        "commercial",
+        "navigational",
+        "local",
+        "brand",
+      ])
+    )
+    .optional()
+    .describe(""),
+
+  search_intent_excludes: z
+    .array(
+      z.enum([
+        "informational",
+        "transactional",
+        "commercial",
+        "navigational",
+        "local",
+        "brand",
+      ])
+    )
+    .optional()
+    .describe(""),
+
+  serp_features_includes: z.array(z.string()).optional().describe(""),
+  serp_features_excludes: z.array(z.string()).optional().describe(""),
 });
 
 const getDomainsHistoryPositions = DomainsToolsParams.extend({
@@ -1048,6 +1388,38 @@ export function configureHaloscan(server: McpServer) {
     }
   );
 
+  /* -------------------- KEYWORDS TOP SITES -------------------- */
+  server.tool(
+    "get_keywords_top_sites",
+    "Obtenir les sites les plus pertinents pour une liste de mots-clés.",
+    getKeywordsTopSites.shape,
+    async (params: z.infer<typeof getKeywordsTopSites>) => {
+      const apiKey = API_KEY;
+      if (!apiKey) {
+        return {
+          isError: true,
+          content: [{ type: "text", text: "API key not found (session or env)" }],
+        };
+      }
+      try {
+        const data = await makeHaloscanRequest(
+          "/keywords/topSites",
+          params,
+          "POST",
+          apiKey
+        );
+        return {
+          content: [{ type: "text", text: JSON.stringify(data, null, 2) }],
+        };
+      } catch (error: any) {
+        return {
+          isError: true,
+          content: [{ type: "text", text: error.message }],
+        };
+      }
+    }
+  );
+
   // Tool to get keywords serp compare
   server.tool(
     "get_keywords_serp_compare",
@@ -1112,6 +1484,38 @@ export function configureHaloscan(server: McpServer) {
     }
   );
 
+  /* -------------------- KEYWORDS SERP HISTORY -------------------- */
+  server.tool(
+    "get_keywords_serp_history",
+    "Obtenir l'historique SERP d'un mot-clé.",
+    getKeywordsSerpHistory.shape,
+    async (params: z.infer<typeof getKeywordsSerpHistory>) => {
+      const apiKey = API_KEY;
+      if (!apiKey) {
+        return {
+          isError: true,
+          content: [{ type: "text", text: "API key not found (session or env)" }],
+        };
+      }
+      try {
+        const data = await makeHaloscanRequest(
+          "/keywords/serpHistory",
+          params,
+          "POST",
+          apiKey
+        );
+        return {
+          content: [{ type: "text", text: JSON.stringify(data, null, 2) }],
+        };
+      } catch (error: any) {
+        return {
+          isError: true,
+          content: [{ type: "text", text: error.message }],
+        };
+      }
+    }
+  );
+
   // Tool to get keywords serp available dates
   server.tool(
     "get_keywords_serp_pageEvolution",
@@ -1139,6 +1543,38 @@ export function configureHaloscan(server: McpServer) {
               }`,
             },
           ],
+        };
+      }
+    }
+  );
+
+    /* -------------------- KEYWORDS SERP DOMAIN EVOLUTION -------------------- */
+  server.tool(
+    "get_keywords_serp_domain_evolution",
+    "Obtenir l'évolution historique d'un domaine dans les SERP d'un mot-clé.",
+    getKeywordsSerpDomainEvolution.shape,
+    async (params: z.infer<typeof getKeywordsSerpDomainEvolution>) => {
+      const apiKey = API_KEY;
+      if (!apiKey) {
+        return {
+          isError: true,
+          content: [{ type: "text", text: "API key not found (session or env)" }],
+        };
+      }
+      try {
+        const data = await makeHaloscanRequest(
+          "/keywords/serp/domainEvolution",
+          params,
+          "POST",
+          apiKey
+        );
+        return {
+          content: [{ type: "text", text: JSON.stringify(data, null, 2) }],
+        };
+      } catch (error: any) {
+        return {
+          isError: true,
+          content: [{ type: "text", text: error.message }],
         };
       }
     }
@@ -1325,6 +1761,39 @@ export function configureHaloscan(server: McpServer) {
               }`,
             },
           ],
+        };
+      }
+    }
+  );
+
+  /* -------------------- DOMAINS AI OVERVIEW SOURCES -------------------- */
+  server.tool(
+    "get_domains_aio_sources",
+    "Obtenir les sources AIO d'un domaine ou d'une URL",
+    getDomainsAioSources.shape,
+    async (params: z.infer<typeof getDomainsAioSources>) => {
+      const apiKey = API_KEY;
+
+      if (!apiKey) {
+        return {
+          isError: true,
+          content: [{ type: "text", text: "API key not found (session or env)" }],
+        };
+      }
+      try {
+        const data = await makeHaloscanRequest(
+          "/domains/aioSources",
+          params,
+          "POST",
+          apiKey
+        );
+        return {
+          content: [{ type: "text", text: JSON.stringify(data, null, 2) }],
+        };
+      } catch (error: any) {
+        return {
+          isError: true,
+          content: [{ type: "text", text: error.message }],
         };
       }
     }
